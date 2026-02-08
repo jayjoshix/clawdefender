@@ -51,12 +51,17 @@ Run the server as a containerized service.
 
 3.  **Run Container**:
     ```bash
+    # Prepare logs directory with correct permissions (UID 1000 is 'node' user)
+    mkdir logs
+    sudo chown -R 1000:1000 logs
+
     docker run -d \
       -p 3000:3000 \
       --env-file .env \
       -v $(pwd)/logs:/app/.logs \
       -v $(pwd)/packages/clawguard/policy.yaml:/app/policy.yaml \
       --name clawguard-server \
+      --health-cmd="curl -f http://localhost:3000/v1/status || exit 1" \
       clawguard/server:latest
     ```
 
