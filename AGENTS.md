@@ -92,7 +92,7 @@ pnpm install && pnpm build && pnpm test && pnpm test:e2e
 | `CLAWGUARD_TOKEN` | Bearer token for API | Server / Client |
 | `POLICY_PATH` | Path to `policy.yaml` | Server |
 | `LOG_DIR` | Directory for JSONL logs | Server (Core for audit) |
-| `SUI_KEYPAIR` | Private key (suiprivkey...) | `pnpm demo` (On-Chain transactions) |
+| `SUI_KEYPAIR` | Private key (suiprivkey...) | `pnpm demo` (Client-side transactions) |
 | `SEAL_PACKAGE_ID` | Move package ID | `pnpm demo` (Encryption) |
 
 ## 6. Constraints ("Do Not Do")

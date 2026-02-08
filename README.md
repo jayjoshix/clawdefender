@@ -121,7 +121,7 @@ For tools that must run on the agent (e.g., browser automation), use the **Permi
 | `CLAWGUARD_TOKEN` | Bearer token for API authentication | Required |
 | `POLICY_PATH` | Path to `policy.yaml` | `./policy.yaml` |
 | `LOG_DIR` | Directory for secure audit logs | `./logs` |
-| `SUI_KEYPAIR` | Server identity (Bech32 `suiprivkey...`) | Auto-generated |
+| `SUI_KEYPAIR` | Private key for **demo/client** transactions | Auto-generated (server uses `logs/server-key.json`) |
 | `PORT` | API Port | `3000` |
 
 ---
