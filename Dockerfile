@@ -51,6 +51,7 @@ USER node
 # Environment setup
 ENV NODE_ENV=production
 ENV PORT=3000
+ENV LOGDIR=/app/.logs
 
 # Metadata
 EXPOSE 3000

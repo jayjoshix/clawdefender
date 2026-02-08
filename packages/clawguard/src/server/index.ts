@@ -299,6 +299,7 @@ export async function createServer(options?: {
     logDir?: string;
     sessionId?: string;
     approversPath?: string;
+    trustProxy?: boolean;
 }) {
     const logDir = options?.logDir ?? process.env.LOGDIR ?? '.logs';
     const sessionId = getOrCreateSessionId(logDir, options?.sessionId);
@@ -340,7 +341,10 @@ export async function createServer(options?: {
     }
 
     // Fastify has built-in pino logger
-    const app = Fastify({ logger: true });
+    const app = Fastify({
+        logger: true,
+        trustProxy: options?.trustProxy ?? false
+    });
     await app.register(cors);
 
     // Protected paths for auth
