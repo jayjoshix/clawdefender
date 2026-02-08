@@ -24,7 +24,7 @@
 - **🛡️ Seal Integration (SDK v2)**: Session logs are encrypted via **Sui Seal**, ensuring only authorized parties can decrypt the audit trail.
 - **☁️ Walrus Storage**: Encrypted bundles are stored permanently on Walrus decentralized storage.
 
-> **Implementation Note**: The reference server enforces policies for all tools, but only implements *execution* for `shell` and `filesystem`. For `network`, it returns a "policy passed" signal, allowing the agent to proceed with its own network library.
+> **Implementation Note**: The reference server enforces policies for all tools. However, `execute_action` only implements `shell` and `filesystem`; other tools (like `network`) hit the default "not implemented" branch (while still marking the proposal executed and logging the `execute` event).
 
 ---
 
@@ -80,8 +80,9 @@ rules:
 ### 2. Start Server
 ```bash
 cd packages/clawguard
-export CLAWGUARD_TOKEN="secret-token"
+export CLAWGUARDTOKEN="secret-token"   # Optional but strongly recommended
 export POLICY_PATH="./policy.yaml"
+export LOGDIR=".logs"                  # Optional (defaults to ".logs")
 pnpm start
 ```
 
@@ -118,11 +119,13 @@ For tools that must run on the agent (e.g., browser automation), use the **Permi
 ### 4. Configuration
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `CLAWGUARD_TOKEN` | Bearer token for API authentication | Required |
+| `CLAWGUARDTOKEN` | Bearer token for API authentication (if unset, server runs unauthenticated dev mode) | Unset |
 | `POLICY_PATH` | Path to `policy.yaml` | `./policy.yaml` |
-| `LOG_DIR` | Directory for secure audit logs | `./logs` |
+| `LOGDIR` | Directory for JSONL logs | `.logs` |
 | `SUI_KEYPAIR` | Private key for **demo/client** transactions | Auto-generated (server uses `logs/server-key.json`) |
 | `PORT` | API Port | `3000` |
+
+The server identity keypair is persisted at `.logs/server-key.json` (chmod 600); it is not sourced from `SUI_KEYPAIR`.
 
 ---
 

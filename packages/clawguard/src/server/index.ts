@@ -23,7 +23,7 @@ import { createPermit, verifyPermit } from '../auth/permit.js';
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 
 // Server Identity (Persistent)
-const LOG_DIR = resolve('./logs');
+const LOG_DIR = resolve(process.env.LOGDIR ?? '.logs');
 if (!existsSync(LOG_DIR)) {
     mkdirSync(LOG_DIR, { recursive: true });
 }
@@ -52,6 +52,7 @@ if (existsSync(KEY_PATH)) {
 const serverId = serverKeypair.toSuiAddress();
 
 // Event constants for log/rehydration consistency
+// Event constants for log/rehydration consistency
 const EVENT = {
     PROPOSAL_CREATED: 'proposal_created',
     APPROVAL_PAYLOAD_ISSUED: 'approval_payload_issued',
@@ -61,7 +62,7 @@ const EVENT = {
     EXECUTE_BLOCKED: 'execute_blocked_missing_approval',
     EXECUTE: 'execute',
     EXECUTE_FAILED: 'execute_failed',
-    AGENT_COMPLETED: 'agent_completed',
+    AGENT_COMPLETED: 'agentcompleted',
 } as const;
 
 // Request/Response schemas
@@ -299,7 +300,7 @@ export async function createServer(options?: {
     sessionId?: string;
     approversPath?: string;
 }) {
-    const logDir = options?.logDir ?? process.env.LOG_DIR ?? './logs';
+    const logDir = options?.logDir ?? process.env.LOGDIR ?? '.logs';
     const sessionId = getOrCreateSessionId(logDir, options?.sessionId);
 
     const evaluator = new PolicyEvaluator(options?.policyPath);
@@ -333,9 +334,9 @@ export async function createServer(options?: {
     }
 
     // Auth token (optional, but strongly recommended for production)
-    const authToken = process.env.CLAWGUARD_TOKEN;
+    const authToken = process.env.CLAWGUARDTOKEN;
     if (!authToken) {
-        console.warn('⚠️  CLAWGUARD_TOKEN not set → running unauthenticated (dev mode)');
+        console.warn('⚠️  CLAWGUARDTOKEN not set → running unauthenticated (dev mode)');
     }
 
     // Fastify has built-in pino logger

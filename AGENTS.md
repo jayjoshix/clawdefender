@@ -89,10 +89,10 @@ pnpm install && pnpm build && pnpm test && pnpm test:e2e
 ### Environment Variables
 | Variable | Purpose | Required For |
 |----------|---------|--------------|
-| `CLAWGUARD_TOKEN` | Bearer token for API | Server / Client |
+| `CLAWGUARDTOKEN` | Bearer token for API | Server / Client |
 | `POLICY_PATH` | Path to `policy.yaml` | Server |
-| `LOG_DIR` | Directory for JSONL logs | Server (Core for audit) |
-| `SUI_KEYPAIR` | Private key (suiprivkey...) | `pnpm demo` (Client-side transactions) |
+| `LOGDIR` | Directory for JSONL logs | Server (Core for audit) |
+| `SUI_KEYPAIR` | Private key for **demo/client** transactions | `pnpm demo` (Client-side transactions) |
 | `SEAL_PACKAGE_ID` | Move package ID | `pnpm demo` (Encryption) |
 
 ## 6. Constraints ("Do Not Do")
@@ -103,4 +103,4 @@ pnpm install && pnpm build && pnpm test && pnpm test:e2e
 ## 7. Known Gotchas
 -   **Network Policies**: The policy engine normalizes `host`, `domain`, and `url`. Ensure specific deny rules (like `*.onion`) are tested if tool arguments vary.
 -   **Faucet**: Ensure your wallet has gas. Use the appropriate faucet for your network (Discord for Testnet/Devnet; `sui client faucet` for localnet).
--   **Plan B Permits**: Permits expire quickly (60s). Agents must call `complete_action` promptly. The `usedPermits` set is in-memory only (resets on restart), but `proposal.executed` persists via log rehydration (both `execute` and `agent_completed` events).
+-   **Plan B Permits**: Permits expire quickly (60s). Agents must call `complete_action` promptly. The `usedPermits` set is in-memory only (resets on restart), but `proposal.executed` persists via log rehydration (both `execute` and `agentcompleted` events).
