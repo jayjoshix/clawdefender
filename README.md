@@ -108,6 +108,22 @@ If the response is `needs_approval`, the agent must wait for a signature.
 3.  **Submit**: `POST /v1/approve_action` with the signature.
 4.  **Execute**: `POST /v1/execute_action`.
 
+#### Plan B (Agent-Side Execution)
+For tools that must run on the agent (e.g., browser automation), use the **Permit Token** flow:
+1.  **Propose**: `POST /v1/propose_action` → Returns `permit` token.
+2.  **Execute**: Agent runs the tool locally.
+3.  **Complete**: `POST /v1/complete_action` with `permit`, `proposalId`, and result.
+    - *Security*: Requires valid signature, exact binding (args/policy), and <60s expiry.
+
+### 4. Configuration
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `CLAWGUARD_TOKEN` | Bearer token for API authentication | Required |
+| `POLICY_PATH` | Path to `policy.yaml` | `./policy.yaml` |
+| `LOG_DIR` | Directory for secure audit logs | `./logs` |
+| `SUI_KEYPAIR` | Server identity (Bech32 `suiprivkey...`) | Auto-generated |
+| `PORT` | API Port | `3000` |
+
 ---
 
 ## 🔍 Independent Verification

@@ -28,6 +28,7 @@ The agent interacts with ClawGuard via HTTP (default port 3000).
 
 ### Tool Request Shapes (`propose_action`)
 Ensure `args` match the policy engine's expectations:
+> **Strict JSON Requirement**: Arguments must be **plain JSON objects**. Complex types like `Date`, `Buffer`, or custom class instances will be rejected during canonicalization.
 
 1.  **Shell**:
     ```json
