@@ -31,6 +31,12 @@ RUN pnpm --filter @clawguard/core --prod deploy /app/pruned
 # Runtime stage
 FROM node:20-slim
 
+# Install runtime dependencies (curl for healthcheck)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
 # Create directory structure and set permissions for node user
 RUN mkdir -p /app/.logs && chown -R node:node /app
 

@@ -1,9 +1,15 @@
 import { createServer } from './server/index.js';
 
 async function main() {
-    const { app } = await createServer();
+    // Explicitly pass env vars to ensure configuration is honored
+    const { app } = await createServer({
+        policyPath: process.env.POLICY_PATH,
+        logDir: process.env.LOGDIR,
+    });
+
     const port = parseInt(process.env.PORT ?? '3000', 10);
-    await app.listen({ port, host: '0.0.0.0' }); // 0.0.0.0 for Docker
+    // Bind to 0.0.0.0 for Docker accessibility
+    await app.listen({ port, host: '0.0.0.0' });
     console.log(`ClawGuard server listening on http://0.0.0.0:${port}`);
 }
 
