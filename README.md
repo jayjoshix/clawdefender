@@ -122,7 +122,7 @@ For tools that must run on the agent (e.g., browser automation), use the **Permi
 | `CLAWGUARDTOKEN` | Bearer token for API authentication (if unset, server runs unauthenticated dev mode) | Unset |
 | `POLICY_PATH` | Path to `policy.yaml` | `./policy.yaml` |
 | `LOGDIR` | Directory for JSONL logs | `.logs` |
-| `SUI_KEYPAIR` | Private key for **demo/client** transactions | Auto-generated (server uses `logs/server-key.json`) |
+| `SUI_KEYPAIR` | Private key for **demo/client** transactions | Auto-generated (server uses `.logs/server-key.json`) |
 | `PORT` | API Port | `3000` |
 
 The server identity keypair is persisted at `.logs/server-key.json` (chmod 600); it is not sourced from `SUI_KEYPAIR`.

@@ -58,7 +58,7 @@ Ensure `args` match the policy engine's expectations:
 | **Network Normalization** | `evaluator.ts` (best practice: use `host`/`domain` in args) | `pnpm test` (.onion regression) |
 | **Audit Anchoring** | `src/bundler` + `seal-client` | `pnpm demo -- --verify` |
 | **Permit Binding (Plan B)** | `complete_action` verifies all fields | Forge permit with wrong `argsHash` |
-| **Server Identity** | `logs/server-key.json` (chmod 600) | `ls -la logs/server-key.json` |
+| **Server Identity** | `$LOGDIR/server-key.json` (defaults to `.logs`) | `ls -la .logs/server-key.json` |
 
 ## 4. Repository Map
 
