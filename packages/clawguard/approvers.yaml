@@ -1,0 +1,9 @@
+# ClawGuard Approvers Configuration
+# 
+# List of Sui addresses authorized to approve high-risk actions.
+# Approvers sign approval payloads using their Sui wallet.
+
+approvers:
+  # Example approver (replace with real addresses)
+  - address: "0xd4d32b8457e7c2ece27084631c7a6977ba851a19729deb92db4de848cd262aea"
+    name: "Demo Approver (Testnet)"

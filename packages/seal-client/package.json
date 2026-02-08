@@ -1,0 +1,15 @@
+{
+    "name": "@clawguard/seal-client",
+    "version": "0.1.0",
+    "type": "module",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "build": "tsc",
+        "test": "vitest run"
+    },
+    "dependencies": {
+        "@mysten/seal": "^1.0.0",
+        "@mysten/sui": "^2.3.1"
+    }
+}

@@ -1,0 +1,177 @@
+
+> clawguard-monorepo@0.1.0 demo /home/jay/solidity-22/clawdguard
+> pnpm --filter demo start
+
+
+> demo@0.1.0 start /home/jay/solidity-22/clawdguard/demo
+> tsx src/index.ts
+
+╔══════════════════════════════════════════════════════════════╗
+║                   ClawGuard Demo                             ║
+║     Policy Firewall + Tamper-Evident Blackbox               ║
+╚══════════════════════════════════════════════════════════════╝
+
+📦 Starting ClawGuard server...
+{"level":30,"time":1770451090397,"pid":60311,"hostname":"DESKTOP-0BVG31I","msg":"Server listening at http://127.0.0.1:3000"}
+✅ Server running at http://localhost:3000
+📝 Session ID: demo-1770451090298
+
+═══════════════════════════════════════════════════════════════
+🔍 DEMO 0: Policy Verification
+═══════════════════════════════════════════════════════════════
+
+{"level":30,"time":1770451090565,"pid":60311,"hostname":"DESKTOP-0BVG31I","reqId":"req-1","req":{"method":"GET","url":"/v1/status","hostname":"localhost:3000","remoteAddress":"127.0.0.1","remotePort":47846},"msg":"incoming request"}
+{"level":30,"time":1770451090590,"pid":60311,"hostname":"DESKTOP-0BVG31I","reqId":"req-1","res":{"statusCode":200},"responseTime":22.810298999771476,"msg":"request completed"}
+📜 Policy Path: /home/jay/solidity-22/clawdguard/packages/clawguard/policy.yaml
+🔒 Policy Hash: 30547685d36effc3c0ee3a1310f26e1e931997a8c24d8a12b55486c9c91c56de
+
+═══════════════════════════════════════════════════════════════
+🔴 DEMO 1: Malicious Request - Reading SSH Keys
+═══════════════════════════════════════════════════════════════
+
+{"level":30,"time":1770451090644,"pid":60311,"hostname":"DESKTOP-0BVG31I","reqId":"req-2","req":{"method":"POST","url":"/v1/propose_action","hostname":"localhost:3000","remoteAddress":"127.0.0.1","remotePort":47856},"msg":"incoming request"}
+{"level":30,"time":1770451090657,"pid":60311,"hostname":"DESKTOP-0BVG31I","reqId":"req-2","res":{"statusCode":200},"responseTime":13.154899999499321,"msg":"request completed"}
+📤 Request: cat ~/.ssh/id_rsa
+📥 Response: {
+  "decision": "deny",
+  "reason": "Access to ~/.ssh/id_rsa is restricted",
+  "proposalId": "3eed9654-320f-4b1b-98e0-499996986c36"
+}
+
+✅ BLOCKED! The malicious request was denied.
+   Reason: Access to ~/.ssh/id_rsa is restricted
+
+🔸 Attempting bypass with explicit home path...
+{"level":30,"time":1770451090672,"pid":60311,"hostname":"DESKTOP-0BVG31I","reqId":"req-3","req":{"method":"POST","url":"/v1/propose_action","hostname":"localhost:3000","remoteAddress":"127.0.0.1","remotePort":47846},"msg":"incoming request"}
+{"level":30,"time":1770451090676,"pid":60311,"hostname":"DESKTOP-0BVG31I","reqId":"req-3","res":{"statusCode":200},"responseTime":3.2010000003501773,"msg":"request completed"}
+📤 Request: cat $HOME/.ssh/id_rsa
+📥 Response: {
+  "decision": "deny",
+  "reason": "Access to $HOME/.ssh/id_rsa is restricted",
+  "proposalId": "4cdfc3f0-6e81-48c4-936b-366cf5bc10f5"
+}
+✅ BLOCKED! Bypass attempt denied.
+
+{"level":30,"time":1770451090693,"pid":60311,"hostname":"DESKTOP-0BVG31I","reqId":"req-4","req":{"method":"POST","url":"/v1/propose_action","hostname":"localhost:3000","remoteAddress":"127.0.0.1","remotePort":47856},"msg":"incoming request"}
+{"level":30,"time":1770451090697,"pid":60311,"hostname":"DESKTOP-0BVG31I","reqId":"req-4","res":{"statusCode":200},"responseTime":3.432499999180436,"msg":"request completed"}
+📤 Request: rm -rf /
+📥 Response: {
+  "decision": "deny",
+  "reason": "Catastrophic filesystem deletion",
+  "proposalId": "97de6ff0-bd84-4547-8786-bd8dd60b6e2a"
+}
+
+✅ BLOCKED! Catastrophic command denied.
+
+═══════════════════════════════════════════════════════════════
+🟢 DEMO 2: Benign Request - Listing /tmp
+═══════════════════════════════════════════════════════════════
+
+{"level":30,"time":1770451090713,"pid":60311,"hostname":"DESKTOP-0BVG31I","reqId":"req-5","req":{"method":"POST","url":"/v1/propose_action","hostname":"localhost:3000","remoteAddress":"127.0.0.1","remotePort":47846},"msg":"incoming request"}
+{"level":30,"time":1770451090721,"pid":60311,"hostname":"DESKTOP-0BVG31I","reqId":"req-5","res":{"statusCode":200},"responseTime":6.946698999963701,"msg":"request completed"}
+📤 Request: ls -la /tmp
+📥 Proposal: {
+  "decision": "allow",
+  "reason": "Directory listing is safe",
+  "proposalId": "5ed5221f-c62d-4cec-8d8a-3db32a1c8fc1"
+}
+
+✅ ALLOWED! Executing command...
+
+{"level":30,"time":1770451090749,"pid":60311,"hostname":"DESKTOP-0BVG31I","reqId":"req-6","req":{"method":"POST","url":"/v1/execute_action","hostname":"localhost:3000","remoteAddress":"127.0.0.1","remotePort":47856},"msg":"incoming request"}
+{"level":30,"time":1770451090806,"pid":60311,"hostname":"DESKTOP-0BVG31I","reqId":"req-6","res":{"statusCode":200},"responseTime":56.765697999857366,"msg":"request completed"}
+📥 Execution Result:
+═══════════════════════════════════════════════════════════════
+total 916
+drwxrwxrwt 19 root root  20480 Feb  7 13:19 .
+drwxr-xr-x 59 root root   4096 Feb  7 11:32 ..
+drwxrwxrwx  2 root root     60 Feb  7 11:32 .X11-unix
+drwxr-xr-x  3 jay  jay    4096 Feb  7 12:33 EAX-pHNp7BWDjERdSBrEb
+drwxr-xr-x  3 jay  jay    4096 Feb  7 12:32 LHxmbig0ICZUptMnAuvEQ
+drwxr-xr-x  3 jay  jay    4096 Feb  7 11:58 LzFpfevkrvimippsbtoDV
+drwxr-xr-x  3 jay  jay    4096 Feb  7 12:32 Ul9ly6DoFpyqR4lZePzpx
+drwxr-xr-x  3 jay  jay    4096 Feb  7 12:33 XPVBSLfMJY59VNXX_6kMO
+drwxrwxr-x  2 jay  jay    4096 Feb  7 11:33 clawdbot
+drwxrwxr-x  2 jay  jay    4096 Feb  7 13:24 clawdbot-1000
+drwxrwxr-x  2 jay  jay   81920 Feb  7 11:33 jiti
+drwxr-xr-x  3 jay  jay    4096 Feb  7 11:58 lhP4slcPYTA0_uCX-yn7V
+drwxr-xr-x  3 jay  jay    4096 Feb  7 11:57 mBLfxEbGYRaXW_JUCOtcV
+drwxr-xr-x  5 jay  jay    4096 Feb  7 11:51 node-compile-cache
+-rw-r--r--  1 jay  jay    1493 Feb  7 13:12 original.jsonl
+drwx------  3 root root   4096 Feb  7 11:32 snap-private-tmp
+drwx------  3 root root   4096 Feb  7 11:32 systemd-private-6d8bb02635c849989c9e6ead1c88016d-systemd-logind.service-xCTVjJ
+drwx------  3 root root   4096 Feb  7 11:32 systemd-private-6d8bb02635c849989c9e6ead1c88016d-systemd-resolved.service-WoIycn
+drwxr-xr-x  2 jay  jay    4096 Feb  7 13:28 tsx-1000
+-rw-r--r--  1 jay  jay  333773 Feb  7 13:11 unleash-backup-codeium-extension.json
+-rw-r--r--  1 jay  jay  423488 Feb  7 13:27 unleash-repo-schema-v1-codeium-language-server.json
+drwxr-xr-x  3 jay  jay    4096 Feb  7 11:43 vscode-typescript1000
+
+═══════════════════════════════════════════════════════════════
+
+═══════════════════════════════════════════════════════════════
+🌐 DEMO 3: Network Access Control
+═══════════════════════════════════════════════════════════════
+
+{"level":30,"time":1770451090822,"pid":60311,"hostname":"DESKTOP-0BVG31I","reqId":"req-7","req":{"method":"POST","url":"/v1/propose_action","hostname":"localhost:3000","remoteAddress":"127.0.0.1","remotePort":47846},"msg":"incoming request"}
+{"level":30,"time":1770451090826,"pid":60311,"hostname":"DESKTOP-0BVG31I","reqId":"req-7","res":{"statusCode":200},"responseTime":3.4542999994009733,"msg":"request completed"}
+📤 Request: Network egress to api.github.com
+📥 Decision: allow - GitHub API allowed
+
+{"level":30,"time":1770451090839,"pid":60311,"hostname":"DESKTOP-0BVG31I","reqId":"req-8","req":{"method":"POST","url":"/v1/propose_action","hostname":"localhost:3000","remoteAddress":"127.0.0.1","remotePort":47856},"msg":"incoming request"}
+{"level":30,"time":1770451090842,"pid":60311,"hostname":"DESKTOP-0BVG31I","reqId":"req-8","res":{"statusCode":200},"responseTime":3.001800000667572,"msg":"request completed"}
+📤 Request: Network egress to secret.onion
+📥 Decision: deny - Tor hidden services blocked
+
+═══════════════════════════════════════════════════════════════
+🔒 DEMO 4: Tamper-Evident Log Chain
+═══════════════════════════════════════════════════════════════
+
+{"level":30,"time":1770451090853,"pid":60311,"hostname":"DESKTOP-0BVG31I","reqId":"req-9","req":{"method":"GET","url":"/v1/status","hostname":"localhost:3000","remoteAddress":"127.0.0.1","remotePort":47846},"msg":"incoming request"}
+{"level":30,"time":1770451090857,"pid":60311,"hostname":"DESKTOP-0BVG31I","reqId":"req-9","res":{"statusCode":200},"responseTime":3.3342999992892146,"msg":"request completed"}
+📊 Server Status: {
+  "status": "ok",
+  "sessionId": "demo-1770451090298",
+  "proposalCount": 6,
+  "logPath": "/home/jay/solidity-22/clawdguard/demo/logs/session-demo-1770451090298.jsonl",
+  "lastHash": "cac0c8ab5b66fb6cf262b4b229c93a54cdb1bfb86604057ecd17e481e52eb2a7",
+  "policyPath": "/home/jay/solidity-22/clawdguard/packages/clawguard/policy.yaml",
+  "policyHash": "30547685d36effc3c0ee3a1310f26e1e931997a8c24d8a12b55486c9c91c56de"
+}
+
+📜 Log file: /home/jay/solidity-22/clawdguard/demo/logs/session-demo-1770451090298.jsonl
+🔗 Final hash: cac0c8ab5b66fb6cf262b4b229c93a54cdb1bfb86604057ecd17e481e52eb2a7
+
+📝 Log entries (7 total):
+   5. [ALLOW] shell:execute
+      Hash: 519d45800dc6930a...
+   6. [ALLOW] network:egress
+      Hash: 171fd07d179beff3...
+   7. [DENY] network:egress
+      Hash: cac0c8ab5b66fb6c...
+
+═══════════════════════════════════════════════════════════════
+📦 DEMO 5: Session Bundle + Walrus Upload
+═══════════════════════════════════════════════════════════════
+
+📁 Creating session bundle...
+   Bundle path: /home/jay/solidity-22/clawdguard/demo/bundles/session-demo-1770451090298.tar.gz
+   Bundle hash: bcd3ea3ffe326098cf8af4fa909ac0b4cc7ed2780c96526709508758aa90f5b6
+   Bundle size: 2677 bytes
+   Final log hash: cac0c8ab5b66fb6cf262b4b229c93a54cdb1bfb86604057ecd17e481e52eb2a7
+
+☁️  Uploading to Walrus...
+
+✅ Upload successful!
+═══════════════════════════════════════════════════════════════
+   Walrus Blob ID: m1_0qVBBScbORkJMzA_UZRM3d1-CeskJlmPQ2uGuc0U
+   Already Certified: false
+   Final Log Hash: cac0c8ab5b66fb6cf262b4b229c93a54cdb1bfb86604057ecd17e481e52eb2a7
+═══════════════════════════════════════════════════════════════
+
+📄 Receipt saved: /home/jay/solidity-22/clawdguard/demo/bundles/receipt-demo-1770451090298.json
+
+🎉 Demo complete!
+
+To verify the log chain:
+   pnpm verify-log -- /home/jay/solidity-22/clawdguard/demo/logs/session-demo-1770451090298.jsonl
+

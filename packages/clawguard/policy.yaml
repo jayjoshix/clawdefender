@@ -1,0 +1,187 @@
+# ClawGuard Policy Configuration
+# Controls what actions the agent can perform
+
+version: "1.0"
+
+# Default behavior when no rule matches
+defaults:
+  decision: deny
+  reason: "No matching rule found"
+
+rules:
+  # Shell command rules
+  shell:
+    # Dangerous commands - always deny
+    deny:
+      - pattern: "rm -rf /"
+        reason: "Catastrophic filesystem deletion"
+      - pattern: "rm -rf ~"
+        reason: "Home directory deletion"
+      - pattern: "sudo *"
+        reason: "Elevated privileges not allowed"
+      - pattern: ":(){:|:&};:"
+        reason: "Fork bomb detected"
+      - pattern: "chmod 777 *"
+        reason: "Dangerous permission change"
+      - pattern: "curl * | bash"
+        reason: "Piping remote script to shell"
+      - pattern: "wget * | bash"
+        reason: "Piping remote script to shell"
+      - pattern: "*|*"
+        reason: "Piping commands is restricted"
+      - pattern: "*;*"
+        reason: "Command chaining is restricted"
+      - pattern: "*&*"
+        reason: "Background execution is restricted"
+      - pattern: "*>*"
+        reason: "Redirection is restricted"
+      - pattern: "*<*"
+        reason: "Redirection is restricted"
+    
+    # Commands requiring manual approval
+    needs_approval:
+      - pattern: "rm *"
+        reason: "File deletion requires approval"
+      - pattern: "mv *"
+        reason: "File move requires approval"
+      - pattern: "chmod *"
+        reason: "Permission change requires approval"
+      - pattern: "chown *"
+        reason: "Ownership change requires approval"
+      - pattern: "kill *"
+        reason: "Process termination requires approval"
+      - pattern: "pkill *"
+        reason: "Process termination requires approval"
+    
+    # Safe commands - allow
+    allow:
+      - pattern: "ls *"
+        reason: "Directory listing is safe"
+      - pattern: "cat *"
+        paths_except: ["/etc/passwd", "/etc/shadow", "~/.ssh/*", "*.pem", "*.key"]
+        reason: "File reading allowed except sensitive files"
+      - pattern: "pwd"
+        reason: "Current directory is safe"
+      - pattern: "echo *"
+        reason: "Echo is safe"
+      - pattern: "date"
+        reason: "Date command is safe"
+      - pattern: "whoami"
+        reason: "Identity check is safe"
+      - pattern: "head *"
+        paths_except: ["/etc/passwd", "/etc/shadow", "~/.ssh/*", "*.pem", "*.key"]
+        reason: "File preview allowed except sensitive files"
+      - pattern: "tail *"
+        paths_except: ["/etc/passwd", "/etc/shadow", "~/.ssh/*", "*.pem", "*.key"]
+        reason: "File preview allowed except sensitive files"
+      - pattern: "wc *"
+        reason: "Word count is safe"
+      - pattern: "grep *"
+        paths_except: ["/etc/passwd", "/etc/shadow", "~/.ssh/*", "*.pem", "*.key"]
+        reason: "Search allowed except sensitive files"
+      - pattern: "find *"
+        paths_except: ["/etc", "/root", "~/.ssh"]
+        reason: "Find allowed except system dirs"
+
+  # Filesystem access rules  
+  filesystem:
+    read:
+      deny:
+        - path: "~/.ssh/*"
+          reason: "SSH keys are sensitive"
+        - path: "/etc/shadow"
+          reason: "Password file is sensitive"
+        - path: "/etc/passwd"
+          reason: "User database is sensitive"
+        - path: "*.pem"
+          reason: "Certificate files are sensitive"
+        - path: "*.key"
+          reason: "Private key files are sensitive"
+        - path: "*/.env"
+          reason: "Environment files contain secrets"
+        - path: "*/.git/config"
+          reason: "Git config may contain tokens"
+      
+      needs_approval:
+        - path: "/etc/*"
+          reason: "System config access requires approval"
+        - path: "/var/log/*"
+          reason: "Log access requires approval"
+      
+      allow:
+        - path: "/tmp/*"
+          reason: "Temp directory is safe"
+        - path: "~/.config/openclaw/*"
+          reason: "OpenClaw config is accessible"
+        - path: './*'
+          reason: 'Current project directory is safe'
+
+    write:
+      deny:
+        - path: "~/.ssh/*"
+          reason: "Cannot modify SSH keys"
+        - path: "/etc/*"
+          reason: "Cannot modify system config"
+        - path: "/usr/*"
+          reason: "Cannot modify system binaries"
+        - path: "/bin/*"
+          reason: "Cannot modify system binaries"
+      
+      needs_approval:
+        - path: "~/*"
+          reason: "Home directory writes require approval"
+      
+      allow:
+        - path: "/tmp/*"
+          reason: "Temp directory writes allowed"
+        - path: './*'
+          reason: 'Project directory writes allowed'
+
+  # Network egress rules
+  network:
+    egress:
+      deny:
+        - domain: "*.onion"
+          reason: "Tor hidden services blocked"
+        - domain: "localhost:*"
+          reason: "Local network access blocked by default"
+        - domain: "127.0.0.1:*"
+          reason: "Loopback blocked"
+        - domain: "192.168.*.*"
+          reason: "Private network blocked"
+        - domain: "10.*.*.*"
+          reason: "Private network blocked"
+      
+      needs_approval:
+        - domain: "*"
+          reason: "External network access requires approval"
+      
+      allow:
+        - domain: "api.github.com"
+          reason: "GitHub API allowed"
+        - domain: "registry.npmjs.org"
+          reason: "NPM registry allowed"
+        - domain: "pypi.org"
+          reason: "PyPI allowed"
+        - domain: "*.walrus-testnet.walrus.space"
+          reason: "Walrus testnet allowed"
+
+  # Browser automation rules
+  browser:
+    deny:
+      - domain: "*.onion"
+        reason: "Tor hidden services blocked"
+      - domain: "file://*"
+        reason: "Local file access blocked"
+    
+    needs_approval:
+      - domain: "*"
+        reason: "Browser navigation requires approval"
+    
+    allow:
+      - domain: "docs.openclaw.ai"
+        reason: "OpenClaw docs allowed"
+      - domain: "github.com"
+        reason: "GitHub allowed"
+      - domain: "*.npmjs.com"
+        reason: "NPM allowed"

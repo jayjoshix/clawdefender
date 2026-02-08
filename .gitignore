@@ -1,0 +1,28 @@
+# Logs
+logs/
+*.jsonl
+
+# Bundles
+bundles/
+
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Move build artifacts
+move/*/build/
