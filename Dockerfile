@@ -58,7 +58,7 @@ EXPOSE 3000
 
 # Healthcheck
 HEALTHCHECK --interval=30s --timeout=3s \
-  CMD curl -f http://localhost:3000/v1/status || exit 1
+  CMD curl -f http://127.0.0.1:3000/v1/status || exit 1
 
 # Start server
 # Note: The deploy command copies the package.json which has "main": "./dist/index.js"

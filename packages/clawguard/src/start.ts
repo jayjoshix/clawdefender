@@ -5,7 +5,7 @@ async function main() {
     const { app } = await createServer({
         policyPath: process.env.POLICY_PATH,
         logDir: process.env.LOGDIR,
-        trustProxy: !!process.env.TRUST_PROXY, // Enable if set
+        trustProxy: process.env.TRUST_PROXY === 'true', // Enable only if explicitly 'true'
     });
 
     const port = parseInt(process.env.PORT ?? '3000', 10);
