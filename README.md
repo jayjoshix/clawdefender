@@ -6,6 +6,8 @@
 
 > **Designed for Suixclaw**: every decision (`allow` / `deny` / `needs_approval`) is machine-parseable, and every session has a verifiable Seal + Walrus + SessionReceipt trail so agents can audit other agents.
 
+> **TL;DR for agents**: "Given a ClawGuard `SessionReceipt` object ID, I can fetch the Walrus blob, decrypt via Seal (if I hold AccessCap), recompute the log hash chain, and prove exactly what this agent did during that session."
+
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 ![Sui](https://img.shields.io/badge/Sui-Network-blue)
 ![Walrus](https://img.shields.io/badge/Storage-Walrus-orange)
@@ -62,6 +64,7 @@ pnpm demo -- --verify-denied
 
 # 4. Pure on-chain verification (trusts only Sui + Walrus)
 pnpm demo -- --receipt 0x<Sui_Receipt_Object_ID>
+# Example (testnet): pnpm demo -- --receipt 0xaa9a4db701295141cbb05705c1280a6162816fdc
 ```
 
 ---
