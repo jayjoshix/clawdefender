@@ -1,50 +1,121 @@
-# ClawGuard Submission Details
+# ClawGuard — DeepSurge Submission
 
-## 🏆 Track Selection
-**Track 1: Safety & Security - Fighting Magic with Magic**
+> **ClawGuard turns any OpenClaw agent into a cryptographically auditable firewall**: every risky action is proposed, policy-checked, approved, logged, and anchored to Sui/Walrus for post-mortem verification.
 
-> "Build an immune system for yourself to avoid getting wrecked."
+---
 
-## 🚀 Project Description
-**ClawGuard** is a **Policy Firewall & Digital Blackbox** for AI Agents. It acts as a security middleware that intercepts every tool call from an agent (like OpenClaw), enforces granular access policies, and cryptographically logs actions locally. For high-assurance sessions, it anchors a **Session Receipt** on the Sui blockchain, pointing to an encrypted audit trail stored on Walrus.
+## 🔴 Problem
 
-## 🎯 Feature Mapping (Track 1 Criteria)
+**Agents have root.** One prompt injection or model bug can `rm -rf /` or drain wallets—and logs can be tampered post-incident, making forensics unreliable.
 
-ClawGuard implements **3 key ideas** for this track:
+---
 
-| Hackathon Idea | ClawGuard Implementation | Status |
-|----------------|--------------------------|--------|
-| **"The Wallet Air-Gap"** | **Telegram Signed Approvals**: Risky actions (like `deploy`) trigger a Telegram request. Verification requires an **offline cryptographic signature** from the user's Sui wallet (Ed25519) bound to the canonical instruction bytes. **Telegram acts only as the transport; the security comes from the Sui signature.** | ✅ **Live** |
-| **"Injection Hunter"** | **Policy Firewall**: Blocks dangerous tool calls (e.g., `rm -rf /`, `cat ~/.ssh/*`) based on a `policy.yaml` allowlist, preventing prompt injection from executing system-level damage. | ✅ **Live** |
-| **"Post cryptographic proof"** | **Sui + Walrus Receipts**: Session logs are hashed into a tamper-evident chain. The final bundle is **encrypted with Seal**, uploaded to **Walrus (Testnet)**, and the cryptographic receipt (root hash) is anchored on **Sui**, creating an immutable forensic trail. | ✅ **Live** |
-| **"Self-Hardening"** | **Seal Encryption**: Sensitive session logs are automatically encrypted using Threshold Encryption (Seal) before upload. Decryption is gated by an on-chain Seal policy; only identities satisfying that policy can obtain threshold key shares to decrypt. | ✅ **Live** |
-| **"Context-Awareness"** | **PBAC Engine**: Decisions depend on context. The same command (e.g., `ls`) is allowed locally but triggers approval when originating from an **untrusted source** (web/email), enforcing least privilege dynamically. | ✅ **Live** |
+## ✅ Solution
 
-## 🛠️ Sui Stack Integration
+ClawGuard intercepts every tool call and enforces a fail-closed security pipeline:
+
+1. **Policy Firewall** → `allow` / `deny` / `needs_approval`
+2. **Signed Approval** → nonce-bound Ed25519 signature (Telegram or API)
+3. **Execute** → `spawnSync(shell: false)` hardened execution
+4. **Log Chain** → `prev_hash` → `entry_hash` binding
+5. **Seal Encrypt** → threshold encryption with on-chain AccessCap
+6. **Walrus Store** → durable ciphertext layer
+7. **SessionReceipt** → on-chain root of trust with `policyHash`, `finalLogHash`, `blobId`, `bundleHash`
+
+---
+
+## 🧪 What Judges Can Verify in 5 Minutes
+
+```bash
+git clone https://github.com/jayjoshix/clawdefender.git
+cd clawdefender && pnpm install && pnpm build
+
+# 1. See malicious command DENIED, benign ALLOWED
+pnpm demo
+
+# 2. Off-chain verification of Walrus bundle + log hash
+pnpm demo -- --verify
+
+# 3. Adversarial proof: decryption fails without AccessCap
+pnpm demo -- --verify-denied
+
+# 4. Pure on-chain verification (trusts only Sui + Walrus)
+pnpm demo -- --receipt 0x<Sui_Receipt_Object_ID>
+```
+
+---
+
+## 🔗 Sui Integration
 
 | Component | Usage |
 |-----------|-------|
-| **Sui Network** | Anchors session receipts (`SessionReceipt` object) for immutability. |
-| **Walrus** | Stores encoded session bundles. **Note:** Demo uses Walrus Testnet; blobs are ephemeral and may be wiped or expire by epoch. Blob deletion is not a privacy mechanism; we treat all storage as public and rely on Seal encryption for privacy. |
-| **Sui Seal** | Protects sensitive audit logs using threshold encryption (`@mysten/seal` v1.0). Decryption access is enforced on-chain. |
-| **Sui TypeScript SDK** | Handles all on-chain interactions and offline signature verification (`verifyPersonalMessageSignature`). |
+| **Sui Seal** | Threshold encryption; decryption gated by on-chain policy |
+| **Walrus** | Durable ciphertext storage with blob epochs |
+| **SessionReceipt** | Move object: `policyHash`, `finalLogHash`, `blobId`, `bundleHash` |
+| **AccessCap** | On-chain capability controlling log decryption |
 
-## 🔗 Links & Resources
+---
 
-- **GitHub Repo**: [Link]
+## 🏆 Hackathon Scoring
+
+### Technical Merit
+- Nonce-tracked approvals prevent replay attacks
+- `argsHash` / `policyHash` / `entryHash` binding ensures integrity
+- Fail-closed log rehydration only after `verifyLogChain()`
+- Agent Plan B execution via permit system
+
+### Creativity
+- **"Black box flight recorder"** pattern for AI agents
+- Verifiable post-hoc proofs anchored on-chain
+- Context-aware PBAC: same command allowed/denied based on source
+
+### Sui Integration
+- Seal-based encryption with on-chain access control
+- Walrus as immutable ciphertext layer
+- SessionReceipt on Sui as root of trust
+
+---
+
+## 🔌 How to Use With Your Agent
+
+Drop ClawGuard in front of shell/network/filesystem and route tools via propose → approve → execute:
+
+```typescript
+import { ClawGuardClient } from '@clawguard/openclaw-adapter';
+const client = new ClawGuardClient('http://localhost:3000', process.env.CLAWGUARDTOKEN);
+
+const result = await client.proposeAction('shell', 'exec', { command: 'ls -la' });
+// → allow | deny | needs_approval
+
+// Prove your agent's behavior from chain alone:
+// pnpm demo -- --receipt <id>
+```
+
+---
+
+## ❓ FAQ for Judges
+
+**Q: What if the log is corrupted?**  
+`verifyLogChain()` recomputes all hashes and compares against on-chain `finalLogHash`. Corruption is detected and rejected.
+
+**Q: What if the approver key is compromised?**  
+Each approval is nonce-bound. Replay is impossible. Remove compromised addresses from `approvers.yaml`.
+
+**Q: Does this prevent prompt injection?**  
+It **contains the blast radius**. Malicious commands are denied, require approval, or logged immutably for forensics.
+
+---
+
+## 📸 Visual Proofs
+
+1. **Policy Denial**: `cat ~/.ssh/id_rsa` → **BLOCKED**
+2. **Telegram Approval**: `shell:exec` → User signs offline → **APPROVED**
+3. **On-Chain Receipt**: [Suiscan Link] (shows `policyHash`, `finalLogHash`)
+
+---
+
+## 🔗 Links
+
+- **GitHub**: https://github.com/jayjoshix/clawdefender
 - **Demo Video**: [Link]
-- **Live Demo Command**:
-  ```bash
-  # Requires Node.js 20+ & pnpm
-  git clone <repo>
-  cd clawguard
-  pnpm install && pnpm build
-  # Run full demo (Policy -> Approval -> Encryption -> Receipt)
-  pnpm demo
-  ```
-
-## 📸 visual Proofs
-
-1.  **Policy Denial**: Agent attempts `cat ~/.ssh/id_rsa` -> **BLOCKED**.
-2.  **Telegram Approval**: Agent requests `shell:exec` -> User signs offline -> **APPROVED**.
-3.  **On-Chain Receipt**: [Suiscan Link] (shows `policy_hash` and `final_log_hash`).
+- **Track**: Safety & Security — Fighting Magic with Magic

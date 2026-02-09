@@ -2,503 +2,318 @@
 
 **The Policy Firewall & Digital Blackbox for AI Agents**
 
+> **ClawGuard turns any OpenClaw agent into a cryptographically auditable firewall**: every risky action is proposed, policy-checked, approved, logged, and anchored to Sui/Walrus for post-mortem verification.
+
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 ![Sui](https://img.shields.io/badge/Sui-Network-blue)
 ![Walrus](https://img.shields.io/badge/Storage-Walrus-orange)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)
 
-ClawGuard is a security layer that sits between your AI Agent (e.g., OpenClaw, Eliza) and the sensitive tools it uses. It intercepts every tool call, enforces policy-as-code, and anchors a tamper-evident audit trail to the Sui blockchain.
+---
+
+## 🔴 The Problem
+
+**Agents have root.** One prompt injection or model bug can `rm -rf /` or drain wallets. Worse, logs can be tampered post-incident—making forensics unreliable.
 
 ---
 
-## Table of Contents
+## ✅ The Solution
 
-1. [Quick Start](#quick-start)
-2. [Policy Firewall](#1-policy-firewall)
-3. [Context-Aware Authorization (PBAC)](#2-context-aware-authorization-pbac)
-4. [Execution Hardening](#3-execution-hardening)
-5. [Human-in-the-Loop Approvals](#4-human-in-the-loop-approvals)
-6. [Tamper-Evident Logging](#5-tamper-evident-logging)
-7. [Seal Encryption](#6-seal-encryption)
-8. [Walrus Storage](#7-walrus-storage)
-9. [On-Chain Receipts](#8-on-chain-receipts)
-10. [OpenClaw Integration](#openclaw-integration)
-11. [API Reference](#api-reference)
-12. [Configuration](#configuration)
-13. [Public Interface Contract](#public-interface-contract)
-14. [Testing](#testing)
-15. [Security Guarantees](#security-guarantees)
+ClawGuard intercepts every tool call and enforces a **fail-closed security pipeline**:
+
+```
+Agent Tool Call
+    ↓
+┌─────────────────────────────────────────────────────────────┐
+│  1. POLICY FIREWALL     → allow / deny / needs_approval    │
+│  2. SIGNED APPROVAL     → nonce-bound Ed25519 signature    │
+│  3. EXECUTE             → spawnSync(shell: false)          │
+│  4. LOG CHAIN           → prev_hash → entry_hash binding   │
+│  5. SEAL ENCRYPT        → threshold encryption on-chain    │
+│  6. WALRUS STORE        → durable ciphertext layer         │
+│  7. SUI RECEIPT         → SessionReceipt as root of trust  │
+└─────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## Quick Start
+## 🧪 Verify in 5 Minutes (For Judges)
 
 ```bash
-# Install dependencies
-pnpm install && pnpm build
+# Clone and build
+git clone https://github.com/jayjoshix/clawdefender.git
+cd clawdefender && pnpm install && pnpm build
 
-# Run the server
-pnpm start
-
-# Run E2E demo (Policy → Log → Seal → Walrus → Sui)
+# 1. See policy in action: malicious DENIED, benign ALLOWED
 pnpm demo
 
-# Run security tests
-pnpm test
+# 2. Verify log chain + Walrus bundle (off-chain)
+pnpm demo -- --verify
+
+# 3. Prove decryption fails without AccessCap (adversarial)
+pnpm demo -- --verify-denied
+
+# 4. Pure on-chain verification (trusts only Sui + Walrus)
+pnpm demo -- --receipt 0x<Sui_Receipt_Object_ID>
+```
+
+---
+
+## 🔗 Sui Integration
+
+| Component | Usage |
+|-----------|-------|
+| **Seal** | Threshold encryption; decryption gated by on-chain AccessCap |
+| **Walrus** | Durable ciphertext storage with epochs |
+| **SessionReceipt** | Move object containing `policyHash`, `finalLogHash`, `blobId`, `bundleHash` |
+| **AccessCap** | On-chain capability controlling who can decrypt logs |
+
+---
+
+## 🏆 Hackathon Scoring
+
+### Technical Merit
+- Nonce-tracked approvals prevent replay
+- `argsHash` / `policyHash` / `entryHash` binding ensures integrity
+- Fail-closed log rehydration only after `verifyLogChain()`
+- Agent Plan B execution via permit system
+
+### Creativity
+- **"Black box flight recorder"** pattern for agents
+- Verifiable post-hoc proofs anchored on-chain
+- Context-aware PBAC (same command allowed/denied based on source)
+
+### Sui Integration
+- Seal-based encryption with on-chain access control
+- Walrus as immutable ciphertext layer
+- SessionReceipt on Sui as root of trust
+
+---
+
+## 🔌 Use With Your Agent
+
+Drop ClawGuard in front of shell/network/filesystem and route tools via the propose → approve → execute flow:
+
+```typescript
+import { ClawGuardClient } from '@clawguard/openclaw-adapter';
+
+const client = new ClawGuardClient('http://localhost:3000', process.env.CLAWGUARDTOKEN);
+
+// Propose action → get decision
+const result = await client.proposeAction('shell', 'exec', { command: 'ls -la' });
+
+// If needs_approval → wait for human signature via Telegram/API
+// If allow → execute immediately
+// If deny → blocked
+
+// Prove your agent's behavior from chain alone:
+// pnpm demo -- --receipt <id>
+```
+
+---
+
+## ❓ FAQ for Judges
+
+**Q: What if the log is corrupted?**  
+A: `verifyLogChain()` recomputes all hashes and compares against the on-chain `finalLogHash`. Corruption is detected and rejected.
+
+**Q: What if the approver key is compromised?**  
+A: Each approval is nonce-bound to a specific proposal. Replay is impossible. Remove compromised addresses from `approvers.yaml`.
+
+**Q: Does this prevent prompt injection?**  
+A: It **contains the blast radius**. A malicious command is either denied by policy, requires human approval, or is logged immutably for post-incident analysis.
+
+**Q: What's the trust model?**  
+A: The on-chain SessionReceipt is the root of trust. Local JSON files are convenience copies. Always verify with `--receipt <id>`.
+
+---
+
+## 📦 Quick Start
+
+```bash
+pnpm install && pnpm build
+pnpm demo                           # Full E2E demo
+pnpm test                           # Run all tests
 ```
 
 > [!CAUTION]
-> **Local Development Only**: By default, ClawGuard runs in unauthenticated dev mode (`CLAWGUARDTOKEN` not set). **Never expose to a network without setting `CLAWGUARDTOKEN`**.
+> **Local Development Only**: Set `CLAWGUARDTOKEN` before exposing to any network.
 
 > [!IMPORTANT]
-> **Trust Boundary**: The on-chain receipt is the source of truth, not local JSON files. For audit verification, always use the pure on-chain verification path:
+> **Trust Boundary**: The on-chain receipt is the source of truth. Verify with:
 > ```bash
 > pnpm demo -- --receipt 0x<Sui_Receipt_Object_ID>
 > ```
 
 ---
 
-## 1. Policy Firewall
+## 📖 Full Documentation
 
-Every tool call (shell, filesystem, network, browser) is evaluated against a YAML policy before execution.
+<details>
+<summary><strong>1. Policy Firewall</strong></summary>
 
-### Configuration
-
-Edit `packages/clawguard/policy.yaml`:
+Every tool call is evaluated against `policy.yaml`:
 
 ```yaml
-version: "1.0"
-defaults:
-  decision: deny
-  reason: "Action not explicitly allowed"
-
 rules:
   shell:
     deny:
       - { pattern: "rm -rf /", reason: "Catastrophic deletion" }
-      - { pattern: "bash -c *", reason: "Interpreter bypass blocked" }
+      - { pattern: "bash -c *", reason: "Interpreter bypass" }
     needs_approval:
       - { pattern: "*", conditions: { untrusted_source: [web, email] }, reason: "Untrusted source" }
     allow:
       - { pattern: "ls *", reason: "Safe read-only" }
-      - { pattern: "cat *", reason: "Safe read-only" }
 ```
 
-### Decision Types
+**Decision Types**: `allow` (execute) | `deny` (block) | `needs_approval` (wait for signature)
 
-| Decision | Behavior |
-|----------|----------|
-| `allow` | Execute immediately |
-| `deny` | Block with error |
-| `needs_approval` | Wait for human signature |
+</details>
 
-### Precedence
+<details>
+<summary><strong>2. Context-Aware Authorization (PBAC)</strong></summary>
 
-Rules are evaluated in order: **Deny → Needs Approval → Allow → Default**. The first match wins.
-
----
-
-## 2. Context-Aware Authorization (PBAC)
-
-Add attribute-based conditions to rules. The most important condition is `untrusted_source`.
-
-### How It Works
-
-1. **Agent receives input** from web/email/clipboard
-2. **Adapter tags it**: `meta: { untrustedSource: 'web' }`
-3. **Policy evaluates**: If the rule has `conditions: { untrusted_source: [web] }`, it matches
-4. **Result**: The action requires human approval before execution
-
-### Usage
+Add attribute-based conditions to rules:
 
 ```typescript
-// Tag untrusted input
 const result = await client.proposeAction('shell', 'exec', 
   { command: userInput },
   { untrustedSource: 'web' }  // PBAC attribute
 );
-
-// Result: needs_approval (requires signature)
+// → needs_approval (web input requires human sign-off)
 ```
 
-### Policy Example
+</details>
 
-```yaml
-shell:
-  needs_approval:
-    - pattern: "*"
-      conditions:
-        untrusted_source: [web, email, clipboard]
-      reason: "External input requires approval"
-```
+<details>
+<summary><strong>3. Execution Hardening</strong></summary>
 
----
+- Commands run with `spawnSync(shell: false)` — no metacharacter injection
+- Interpreter bypass patterns explicitly denied: `bash -c`, `sh -c`, `python -c`, etc.
 
-## 3. Execution Hardening
+</details>
 
-Prevents shell injection attacks by running commands without a shell interpreter.
-
-### Implementation
-
-- Commands run with `spawnSync(shell: false)` – no shell metacharacters interpreted
-- Interpreter bypass patterns are explicitly denied: `bash -c`, `sh -c`, `python -c`, `node -e`, `perl -e`
-
-### Attack Prevention
-
-```bash
-# Attacker tries: "ls; rm -rf /"
-
-# With shell:true → DANGEROUS (both commands run)
-# With shell:false → SAFE (interpreted as single command "ls; rm -rf /" which fails)
-```
-
-### Denied Patterns
-
-These are blocked by default in `policy.yaml`:
-
-```yaml
-shell:
-  deny:
-    - { pattern: "sh -c *", reason: "Shell interpreter bypass" }
-    - { pattern: "bash -c *", reason: "Shell interpreter bypass" }
-    - { pattern: "python -c *", reason: "Python interpreter bypass" }
-    - { pattern: "node -e *", reason: "Node interpreter bypass" }
-    - { pattern: "perl -e *", reason: "Perl interpreter bypass" }
-```
-
----
-
-## 4. Human-in-the-Loop Approvals
-
-High-risk actions require a cryptographic signature from an authorized wallet.
-
-### Approval Flow
+<details>
+<summary><strong>4. Human-in-the-Loop Approvals</strong></summary>
 
 ```
 Agent → POST /v1/propose_action → "needs_approval"
-                    ↓
-Human → GET /v1/approval_payload/{proposalId} → Signs with Sui wallet
-                    ↓
-Human → POST /v1/approve_action (signature) → Proposal approved
-                    ↓
+Human → GET /v1/approval_payload/:id → Signs with Sui wallet
+Human → POST /v1/approve_action → Proposal approved
 Agent → POST /v1/execute_action → Action runs
 ```
 
-### Configure Approvers
+Telegram integration available for mobile approvals.
 
-Edit `approvers.yaml`:
+</details>
 
-```yaml
-approvers:
-  - address: "0x1234..."
-    name: "Alice (Security)"
-  - address: "0x5678..."
-    name: "Bob (Ops)"
-```
-
-### Telegram Integration
-
-Approvals can be sent via Telegram bot for mobile approval:
-
-```bash
-export TELEGRAM_BOT_TOKEN="your-bot-token"
-export TELEGRAM_CHAT_ID="your-chat-id"
-```
-
----
-
-## 5. Tamper-Evident Logging
-
-Every event is logged with a cryptographic link to the previous event.
-
-### Log Structure
+<details>
+<summary><strong>5. Tamper-Evident Logging</strong></summary>
 
 ```json
-{"event":"propose","data":{...},"prev_hash":"abc123","entry_hash":"def456"}
-{"event":"approve","data":{...},"prev_hash":"def456","entry_hash":"ghi789"}
-{"event":"execute","data":{...},"prev_hash":"ghi789","entry_hash":"jkl012"}
+{"event":"propose","prev_hash":"abc123","entry_hash":"def456"}
+{"event":"approve","prev_hash":"def456","entry_hash":"ghi789"}
+{"event":"execute","prev_hash":"ghi789","entry_hash":"jkl012"}
 ```
 
-### Tamper Detection
+If any entry is modified, the hash chain breaks.
 
-If any log entry is modified or deleted, the hash chain breaks.
+</details>
 
-### Verify Log Chain
+<details>
+<summary><strong>6. Seal Encryption</strong></summary>
 
-```bash
-pnpm verify-log -- logs/session-<id>.jsonl
-# Output: ✅ Log chain is valid and tamper-free
-```
+Session logs encrypted with Sui Seal threshold encryption. Only wallets with AccessCap can decrypt.
+
+</details>
+
+<details>
+<summary><strong>7. Walrus Storage</strong></summary>
+
+Encrypted bundles stored on Walrus decentralized storage. Immutable and verifiable via Blob ID.
+
+</details>
+
+<details>
+<summary><strong>8. On-Chain Receipts</strong></summary>
+
+SessionReceipt on Sui contains:
+- `policyHash`: Policy version
+- `finalLogHash`: Root of log chain
+- `blobId`: Walrus storage reference
+- `bundleHash`: Integrity check
+
+</details>
 
 ---
 
-## 6. Seal Encryption
-
-Session logs are encrypted using Sui Seal threshold encryption.
-
-### How It Works
-
-1. Logs are bundled at session end
-2. Encrypted with a policy that only the session owner can decrypt
-3. Only authorized wallets can access the audit trail
-
-### Configuration
-
-```bash
-export SEAL_PACKAGE_ID="0x..."  # Sui Seal package
-export SUI_KEYPAIR="suiprivkey..."
-```
-
-### Usage
-
-Encryption happens automatically in the demo:
-
-```bash
-pnpm demo  # Encrypts and uploads to Walrus
-```
-
----
-
-## 7. Walrus Storage
-
-Encrypted log bundles are stored permanently on Walrus decentralized storage.
-
-### Benefits
-
-- **No single point of failure**: Distributed across multiple nodes
-- **Immutable**: Once stored, cannot be deleted
-- **Verifiable**: Blob ID anchored on-chain
-
-### Configuration
-
-```bash
-export WALRUS_PUBLISHER_URL="https://publisher.walrus-testnet.walrus.space"
-export WALRUS_AGGREGATOR_URL="https://aggregator.walrus-testnet.walrus.space"
-```
-
----
-
-## 8. On-Chain Receipts
-
-A receipt object is created on Sui containing:
-
-- Session ID
-- Final log hash
-- Walrus Blob ID
-- Timestamp
-
-### Verification
-
-Auditors can fetch the receipt, download the blob from Walrus, decrypt, and verify the hash chain independently:
-
-```bash
-pnpm demo -- --receipt 0x<Sui_Object_ID>
-```
-
----
-
-## OpenClaw Integration
-
-Use ClawGuard as the security layer for your OpenClaw agents:
-
-```bash
-pnpm add @clawguard/openclaw-adapter
-```
-
-```typescript
-import { ClawGuardClient, executeWithClawGuard } from '@clawguard/openclaw-adapter';
-
-const client = new ClawGuardClient('http://localhost:3000', process.env.CLAWGUARDTOKEN);
-
-// 1. Simple execution (trusted agent, allowed action)
-const result = await executeWithClawGuard(client, 'shell', 'exec', { command: 'ls -la' });
-// → Executes immediately
-
-// 2. External input (PBAC triggers approval)
-const result = await client.proposeAction('shell', 'exec', 
-  { command: userInput }, 
-  { untrustedSource: 'web' }
-);
-// → Returns "needs_approval" → Agent waits for human signature
-
-// 3. Plan A vs Plan B
-// Plan A (ClawGuard executes): shell, filesystem
-// Plan B (Agent executes): network, browser → Use /v1/complete_action to report result
-```
-
----
-
-## API Reference
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/v1/status` | GET | Server health + policy hash |
-| `/v1/propose_action` | POST | Submit action for policy evaluation |
-| `/v1/approval_payload/:id` | GET | Get signable payload for approval |
-| `/v1/approve_action` | POST | Submit signed approval |
-| `/v1/execute_action` | POST | Execute approved action (Plan A) |
-| `/v1/complete_action` | POST | Report agent-side execution (Plan B) |
-
----
-
-## Configuration
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `CLAWGUARDTOKEN` | API authentication token | Unset (dev mode) |
-| `POLICY_PATH` | Path to `policy.yaml` | `./policy.yaml` |
-| `APPROVERS_PATH` | Path to `approvers.yaml` | `../../approvers.yaml` |
-| `LOGDIR` | Log directory | `.logs` |
-| `PORT` | API port | `3000` |
-| `SEAL_PACKAGE_ID` | Sui Seal package ID | Required for encryption |
-| `SUI_KEYPAIR` | Sui private key | Auto-generated |
-| `WALRUS_PUBLISHER_URL` | Walrus publisher endpoint | Testnet default |
-
-### Simulation vs On-Chain Mode
-
-ClawGuard runs in **simulation mode** when blockchain-related env vars are not set:
-
-| Mode | When | Behavior |
-|------|------|----------|
-| **Simulation** | `SEAL_PACKAGE_ID` not set or `0x0` | Logs locally, skips Seal encryption and on-chain receipts |
-| **On-Chain** | `SEAL_PACKAGE_ID` + `SUI_KEYPAIR` set | Full Seal encryption, Walrus upload, Sui receipt |
-
-> **Tip**: For local development/testing, simulation mode is sufficient. Set the blockchain vars only for production or demo verification.
-
-> [!WARNING]
-> **Proxy Trust**: If running behind a reverse proxy (nginx, cloudflare), configure `trustProxy` appropriately. IP-based rate limiting can be bypassed via `X-Forwarded-For` spoofing if proxy trust is misconfigured.
-
----
-
-## Public Interface Contract
-
-This section documents the canonical API paths and decision literals to prevent regressions.
-
-### API Endpoints
-
-```
-GET  /v1/status
-POST /v1/propose_action
-GET  /v1/approval_payload/:proposalId
-POST /v1/approve_action
-POST /v1/execute_action
-POST /v1/complete_action
-```
-
-### Decision Literals
-
-```typescript
-type PolicyDecision = 'allow' | 'deny' | 'needs_approval';
-```
-
-### PBAC Attribute Naming
-
-| Context | Format | Example |
-|---------|--------|--------|
-| API Request (`meta`) | camelCase | `untrustedSource: 'web'` |
-| Policy YAML (`conditions`) | snake_case | `untrusted_source: [web, email]` |
-
-The evaluator automatically maps between these formats.
-
----
-
-## Testing
-
-### Run All Tests
-
-```bash
-# Core tests (hash-chain + policy evaluator)
-cd packages/clawguard && pnpm test
-
-# PBAC policy tests
-cd packages/clawguard && npx tsx test/pbac_test.ts
-
-# Telegram integration tests
-cd packages/openclaw-adapter && pnpm test
-```
-
-### E2E Demo & Verification
-
-```bash
-# Full E2E demo (Policy → Log → Seal → Walrus)
-pnpm demo
-
-# Verify on-chain receipt
-pnpm demo -- --verify
-
-# Verify specific receipt
-pnpm demo -- --receipt 0x<Sui_Object_ID>
-
-# Test Seal access control (adversarial)
-pnpm demo -- --verify-denied
-
-# Verify log chain integrity
-pnpm verify-log -- demo/logs/session-<id>.jsonl
-```
-
-### Live API Testing
-
-```bash
-# Start server
-cd packages/clawguard && CLAWGUARDTOKEN=test pnpm start
-
-# Test allowed action
-curl -X POST http://localhost:3000/v1/propose_action \
-  -H "Authorization: Bearer test" \
-  -H "Content-Type: application/json" \
-  -d '{"tool":"shell","action":"exec","args":{"command":"ls -la"}}'
-
-# Test denied action
-curl -X POST http://localhost:3000/v1/propose_action \
-  -H "Authorization: Bearer test" \
-  -H "Content-Type: application/json" \
-  -d '{"tool":"shell","action":"exec","args":{"command":"rm -rf /"}}'
-
-# Test PBAC (untrusted source triggers approval)
-curl -X POST http://localhost:3000/v1/propose_action \
-  -H "Authorization: Bearer test" \
-  -H "Content-Type: application/json" \
-  -d '{"tool":"shell","action":"exec","args":{"command":"ls"},"meta":{"untrustedSource":"web"}}'
-```
-
-### Live Telegram Approval Testing
-
-```bash
-# Set environment variables
-export TELEGRAM_BOT_TOKEN="your-bot-token"
-export TELEGRAM_CHAT_ID="your-chat-id"
-export TELEGRAM_ALLOWED_USERS="your-user-id"
-
-# Start server with Telegram enabled
-cd packages/clawguard && CLAWGUARDTOKEN=test pnpm start
-
-# Trigger approval (in another terminal)
-curl -X POST http://localhost:3000/v1/propose_action \
-  -H "Authorization: Bearer test" \
-  -H "Content-Type: application/json" \
-  -d '{"tool":"shell","action":"exec","args":{"command":"ls"},"meta":{"untrustedSource":"web"}}'
-
-# Check Telegram for approval message!
-```
-
----
-
-## Security Guarantees
+## 🔒 Security Guarantees
 
 | Threat | Prevention | Observable In |
 |--------|------------|---------------|
-| Log Tampering | Hash chaining (`prev_hash` → `entry_hash`) | `verify-log` script, log files |
+| Log Tampering | Hash chaining (`prev_hash` → `entry_hash`) | `verify-log` script |
 | Log Deletion | On-chain receipt anchors final hash | Sui receipt object |
-| Replay Attacks | Nonces + `executed` flag per proposal | `NonceTracker`, proposal state |
-| Race Conditions | Single-process atomic checks on proposal state | `proposals.get()` + `executed` flag |
-| Shell Injection | `spawnSync(shell: false)` in execution path | `server/index.ts:901` |
-| Interpreter Bypass | Explicit deny rules (`bash -c *`, etc.) | `policy.yaml` deny section |
-| Untrusted Input | PBAC conditions gate by `untrusted_source` | Policy evaluator, tests |
-| Policy Evasion | Canonical argument parsing, path normalization | `evaluator.ts` matching logic |
+| Replay Attacks | Nonces + `executed` flag per proposal | `NonceTracker` |
+| Shell Injection | `spawnSync(shell: false)` | `server/index.ts:901` |
+| Interpreter Bypass | Explicit deny rules (`bash -c *`) | `policy.yaml` |
+| Untrusted Input | PBAC conditions (`untrusted_source`) | Policy evaluator |
 
 ---
 
-## Architecture
+## 📡 API Reference
+
+```
+GET  /v1/status                       # Health + policy hash
+POST /v1/propose_action               # Submit action
+GET  /v1/approval_payload/:proposalId # Get signable payload
+POST /v1/approve_action               # Submit signature
+POST /v1/execute_action               # Execute (Plan A)
+POST /v1/complete_action              # Report result (Plan B)
+```
+
+**Decision Literals**: `'allow' | 'deny' | 'needs_approval'`
+
+---
+
+## ⚙️ Configuration
+
+| Variable | Description |
+|----------|-------------|
+| `CLAWGUARDTOKEN` | API auth token (required for production) |
+| `SEAL_PACKAGE_ID` | Sui Seal package ID |
+| `SUI_KEYPAIR` | Sui private key (bech32) |
+| `WALRUS_PUBLISHER_URL` | Walrus endpoint |
+
+**Simulation Mode**: Runs locally without blockchain when `SEAL_PACKAGE_ID` is unset.
+
+> [!WARNING]
+> **Proxy Trust**: Configure `trustProxy` appropriately behind reverse proxies to prevent IP spoofing.
+
+---
+
+## 🧪 Testing
+
+```bash
+# Core tests (28 tests)
+cd packages/clawguard && pnpm test
+
+# PBAC tests (6 tests)
+npx tsx test/pbac_test.ts
+
+# Telegram integration tests
+cd packages/openclaw-adapter && pnpm test
+
+# Live Telegram approval
+export TELEGRAM_BOT_TOKEN="..."
+export TELEGRAM_CHAT_ID="..."
+curl -X POST localhost:3000/v1/propose_action \
+  -H "Authorization: Bearer test" \
+  -d '{"tool":"shell","action":"exec","args":{"command":"ls"},"meta":{"untrustedSource":"web"}}'
+```
+
+---
+
+## 📐 Architecture
 
 ```mermaid
 graph TD
@@ -507,14 +322,14 @@ graph TD
     Policy -->|Allow| Exec[Execute]
     Policy -->|Needs Approval| Human[Human Approver]
     Human -->|Sign| FW
-    FW -->|Log| Logger[Hash Chain Logger]
-    Logger -->|Bundle| Seal[Seal Encryption]
-    Seal -->|Store| Walrus[Walrus Storage]
-    Seal -->|Anchor| Sui[Sui Blockchain]
+    FW -->|Log| Logger[Hash Chain]
+    Logger -->|Bundle| Seal[Seal Encrypt]
+    Seal -->|Store| Walrus[Walrus]
+    Seal -->|Anchor| Sui[Sui Receipt]
 ```
 
 ---
 
-## License
+## 📜 License
 
 MIT
