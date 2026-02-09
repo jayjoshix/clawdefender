@@ -67,6 +67,16 @@ pnpm demo -- --receipt 0x<Sui_Receipt_Object_ID>
 # Example (testnet): pnpm demo -- --receipt 0xaa9a4db701295141cbb05705c1280a6162816fdc
 ```
 
+### 🌐 Verification Portal (Web UI)
+
+Prefer a GUI? Run the Next.js verification app:
+
+```bash
+cd apps/web && pnpm dev
+# Open http://localhost:3000/verify
+```
+Enter a **Session Receipt ID** to fetch on-chain data and generate the exact CLI command.
+
 ### 🤖 Audit Recipe (for Agents)
 
 To audit a session programmatically:
