@@ -422,17 +422,6 @@ async function main() {
             writeFileSync(receiptPath, JSON.stringify(receipt, null, 2));
             console.log(`\n📄 Receipt saved: ${receiptPath}`);
 
-            // Agent-readable summary
-            console.log('\n🔍 Agent Summary:');
-            console.log(JSON.stringify({
-                sessionId,
-                policyHash: status.policyHash,
-                finalLogHash: bundleResult.finalLogHash,
-                blobId: uploadResult.blobId,
-                bundleHash: bundleResult.bundleHash,
-                receiptObjectId: receiptObjectId || null
-            }));
-
         } catch (error) {
             console.log('\n⚠️  Seal/Walrus failed:', error);
             if (error instanceof Error) console.log(error.stack);
@@ -735,6 +724,18 @@ async function runVerification() {
             console.log('   (Run demo again to create on-chain receipt)');
         }
 
+        // Machine-readable summary
+        console.log('\n🔍 AUDIT SUMMARY (JSON):');
+        console.log(JSON.stringify({
+            sessionId: receipt.sessionId,
+            timestamp: new Date().toISOString(),
+            policyHash: receipt.policyHash,
+            finalLogHash: receipt.finalLogHash,
+            blobId: receipt.blobId,
+            bundleHash: receipt.bundleHash,
+            receiptObjectId: receipt.receiptObjectId || null,
+            verificationStatus: receipt.receiptObjectId ? 'ANCHORED' : 'LOCAL_ONLY'
+        }));
     } catch (e: any) {
         console.error('❌ Decryption failed:', e);
         if (e.message && e.message.includes('ESessionMismatch')) {
@@ -937,6 +938,19 @@ async function runOnChainVerification(receiptObjectId: string) {
         console.log('\n═══════════════════════════════════════════════════════════════');
         console.log('✅ ALL ON-CHAIN VERIFICATIONS PASSED!');
         console.log('═══════════════════════════════════════════════════════════════');
+
+        // Machine-readable summary
+        console.log('\n🔍 AUDIT SUMMARY (JSON):');
+        console.log(JSON.stringify({
+            sessionId: onChain.sessionId,
+            timestamp: new Date().toISOString(),
+            policyHash: onChain.policySha256,
+            finalLogHash: onChain.finalLogHash,
+            blobId: onChain.blobId,
+            bundleHash: onChain.bundleSha256,
+            receiptObjectId: receiptObjectId,
+            verificationStatus: 'VERIFIED'
+        }));
         console.log('\nNo local files were trusted. All values came from:');
         console.log(`  📜 Sui Object: ${receiptObjectId}`);
         console.log(`  ☁️  Walrus Blob: ${onChain.blobId}`);

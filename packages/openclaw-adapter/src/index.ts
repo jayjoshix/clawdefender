@@ -142,7 +142,7 @@ export class ClawGuardClient {
         args: Record<string, unknown>,
         meta?: { untrustedSource?: 'web' | 'email' | 'issue' | 'clipboard' },
     ): Promise<ProposeResponse> {
-        return this.req<ProposeResponse>('/v1/proposeaction', {
+        return this.req<ProposeResponse>('/v1/propose_action', {
             tool,
             action,
             args,
@@ -155,14 +155,14 @@ export class ClawGuardClient {
      * Route this to Telegram/Slack/Web for human approval.
      */
     async getApprovalPayload(proposalId: string): Promise<ApprovalPayload> {
-        return this.req<ApprovalPayload>(`/v1/approvalpayload/${proposalId}`);
+        return this.req<ApprovalPayload>(`/v1/approval_payload/${proposalId}`);
     }
 
     /**
      * Submit a signed approval from a human approver.
      */
     async approveAction(input: ApproveInput): Promise<{ approved: true; permit: string }> {
-        return this.req<{ approved: true; permit: string }>('/v1/approveaction', input);
+        return this.req<{ approved: true; permit: string }>('/v1/approve_action', input);
     }
 
     /**
@@ -171,7 +171,7 @@ export class ClawGuardClient {
      * For network/browser, use Plan B (completeAction).
      */
     async executeAction(proposalId: string): Promise<ExecuteResult> {
-        return this.req<ExecuteResult>('/v1/executeaction', { proposalId });
+        return this.req<ExecuteResult>('/v1/execute_action', { proposalId });
     }
 
     /**
@@ -187,7 +187,7 @@ export class ClawGuardClient {
         result: unknown,
         permit: string,
     ): Promise<CompleteResult> {
-        return this.req<CompleteResult>('/v1/completeaction', {
+        return this.req<CompleteResult>('/v1/complete_action', {
             proposalId,
             result,
             permit,
