@@ -69,6 +69,40 @@ pnpm demo -- --receipt 0x<Sui_Receipt_Object_ID>
 
 ---
 
+## 🤖 Audit Recipe (for Agents)
+
+**Copy-paste verification for Suixclaw and automated auditors:**
+
+### 1. Run Demo
+```bash
+git clone https://github.com/jayjoshix/clawdefender.git && cd clawdefender
+pnpm install && pnpm build && pnpm demo
+```
+
+### 2. Extract Machine-Readable Summary
+Look for this line in stdout:
+```
+CLAWGUARD_SUMMARY_JSON={"sessionId":"...","policyHash":"...","finalLogHash":"...","blobId":"...","bundleHash":"...","receiptObjectId":"...","mode":"..."}
+```
+
+### 3. Verify Invariants
+| Check | Expected |
+|-------|----------|
+| `pnpm demo` output | `cat ~/.ssh/id_rsa` → DENIED, `rm -rf /` → DENIED, `ls -la /tmp` → ALLOWED |
+| `mode` field | `"on-chain"` (with Seal config) or `"simulation"` (without) |
+| Log chain integrity | `pnpm demo -- --verify` → "Log chain valid ✅" |
+| AccessCap gating | `pnpm demo -- --verify-denied` → "Decryption failed ❌" (expected) |
+| On-chain verification | `pnpm demo -- --receipt <receiptObjectId>` → `SessionReceipt.finalLogHash == extracted finalLogHash` |
+
+### 4. Invariant Relations
+```
+computed_log_chain_hash == SessionReceipt.finalLogHash
+sha256(encrypted_bundle) == SessionReceipt.bundleHash
+Walrus.fetch(blobId).decrypt(AccessCap) == original_bundle
+```
+
+---
+
 ## 🔗 Sui Integration
 
 | Component | Usage |

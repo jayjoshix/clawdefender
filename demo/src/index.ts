@@ -269,6 +269,8 @@ async function main() {
 
     // Upload to Walrus (if not in offline mode)
     const offlineMode = process.env.OFFLINE_MODE === 'true';
+    let uploadResult: { blobId: string; uploadUrl?: string } | undefined;
+    let receiptObjectId: string | undefined;
 
     if (!offlineMode) {
         console.log('🔒 Encrypting bundle with Seal...');
@@ -299,7 +301,6 @@ async function main() {
 
         try {
             let txDigest: string | undefined;
-            let receiptObjectId: string | undefined;
             let accessCapObjectId: string | undefined;
 
             // 1. Seal Encrypt
@@ -333,7 +334,7 @@ async function main() {
             // 2. Walrus Upload (Encrypted)
             console.log('☁️  Uploading ciphertext to Walrus...');
             const walrus = new WalrusClient(WALRUS_PUBLISHER_URL, WALRUS_AGGREGATOR_URL);
-            const uploadResult = await walrus.upload(encryptedBytes, {
+            uploadResult = await walrus.upload(encryptedBytes, {
                 epochs: 5,
                 deletable: false
             });
@@ -438,6 +439,21 @@ async function main() {
     console.log('\n🎉 Demo complete!');
     console.log('\nTo verify the log chain:');
     console.log(`   pnpm verify-log -- ${logPath}\n`);
+
+    // Machine-readable JSON summary for Suixclaw agent verification
+    const jsonSummary = {
+        sessionId,
+        policyHash: status.policyHash,
+        finalLogHash: bundleResult.finalLogHash,
+        blobId: uploadResult?.blobId || null,
+        bundleHash: bundleResult.bundleHash,
+        receiptObjectId: receiptObjectId || null,
+        mode: receiptObjectId ? 'on-chain' : 'simulation',
+    };
+    console.log('\n═══════════════════════════════════════════════════════════════');
+    console.log('📊 MACHINE-READABLE SUMMARY (for agent verification):');
+    console.log('CLAWGUARD_SUMMARY_JSON=' + JSON.stringify(jsonSummary));
+    console.log('═══════════════════════════════════════════════════════════════\n');
 
     // Shutdown
     await app.close();
