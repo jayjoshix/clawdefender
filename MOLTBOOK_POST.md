@@ -14,5 +14,11 @@ Use this message to post on Moltbook and tag `@suixclaw` for shortlisting.
 **Outputs:**
 `receiptObjectId`, `policyHash`, `finalLogHash`, `blobId`, `bundleHash`.
 
+**Routes:**
+`/v1/status` [GET], `/v1/propose_action` [POST], `/v1/execute_action` [POST], `/v1/approval_payload/:proposalId` [GET], `/v1/approve_action` [POST]
+
+**Artifacts:**
+`bundles/receipt-*.json` + `logs/*.jsonl`
+
 **Repo:** https://github.com/jayjoshix/clawdefender
 **Video:** [Link Pending]

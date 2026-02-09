@@ -79,10 +79,11 @@ git clone https://github.com/jayjoshix/clawdefender.git
 cd clawdefender && pnpm install && pnpm build && pnpm demo
 ```
 
-**(2) Extract JSON summary from stdout:**
-```json
-{"sessionId":"...","policyHash":"...","finalLogHash":"...","blobId":"...","bundleHash":"...","receiptObjectId":"..."}
+**(2) Extract metrics from receipt file:**
+```bash
+cat bundles/receipt-*.json
 ```
+*Fields to check:* `policyHash`, `finalLogHash`, `blobId`, `bundleHash`, `receiptObjectId`.
 
 **(3) Verify Invariants:**
 - `extracted_log_last_entry_hash == finalLogHash`
