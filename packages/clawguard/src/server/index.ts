@@ -349,7 +349,7 @@ export async function createServer(options?: {
     await app.register(cors);
 
     // Protected paths for auth
-    const protectedPaths = ['/v1/propose_action', '/v1/approval_payload', '/v1/approve_action', '/v1/execute_action', '/v1/complete_action'];
+    const protectedPaths = ['/v1/proposeaction', '/v1/approvalpayload', '/v1/approveaction', '/v1/executeaction', '/v1/completeaction'];
 
     // Simple in-memory rate limiter for approval_payload
     const approvalPayloadRateLimit = new Map<string, { count: number; resetAt: number }>();
@@ -428,8 +428,8 @@ export async function createServer(options?: {
         };
     });
 
-    // POST /v1/propose_action
-    app.post('/v1/propose_action', async (request, reply) => {
+    // POST /v1/proposeaction
+    app.post('/v1/proposeaction', async (request, reply) => {
         const parseResult = ProposeActionSchema.safeParse(request.body);
         if (!parseResult.success) {
             return reply.status(400).send({
@@ -458,21 +458,12 @@ export async function createServer(options?: {
 
         // Log the proposal with raw details for rehydration
         const logEntry = hashLogger.log({
-            tool,
-            action,
-            args_hash: argsHash,
-            decision: evalResult.decision,
-            reason: evalResult.reason,
-            result_hash: sha256({}), // No result yet
-            proposalId,
-            event: 'proposal_created',
-            proposalDetails: {
-                requestedAction: action,
-                args,
-                argsHash,
-                policyHash,
-                untrustedSource: meta?.untrustedSource,
-            },
+            tool: 'server',
+            action: 'auth_failed',
+            args_hash: sha256({ path: request.url, method: request.method }),
+            decision: 'deny',
+            reason: 'Invalid or missing CLAWGUARDTOKEN',
+            result_hash: sha256({ blocked: true }),
         });
 
         const proposal: Proposal = {
@@ -524,14 +515,14 @@ export async function createServer(options?: {
             // Pointer to authoritative approval issuance
             approvalRequired: evalResult.decision === 'needs_approval' ? {
 
-                endpoint: `/v1/approval_payload/${proposalId}`,
+                endpoint: `/v1/approvalpayload/${proposalId}`,
                 ttlSeconds: MAX_APPROVAL_TTL,
             } : undefined,
         };
     });
 
-    // GET /v1/approval_payload/:proposalId - Get payload to sign (idempotent)
-    app.get<{ Params: { proposalId: string } }>('/v1/approval_payload/:proposalId', async (request, reply) => {
+    // GET /v1/approvalpayload/:proposalId - Get payload to sign (idempotent)
+    app.get<{ Params: { proposalId: string } }>('/v1/approvalpayload/:proposalId', async (request, reply) => {
         const { proposalId } = request.params;
         const proposal = proposals.get(proposalId);
 
@@ -807,8 +798,8 @@ export async function createServer(options?: {
         }
     });
 
-    // POST /v1/execute_action
-    app.post('/v1/execute_action', async (request, reply) => {
+    // POST /v1/executeaction
+    app.post('/v1/executeaction', async (request, reply) => {
         const parseResult = ExecuteActionSchema.safeParse(request.body);
         if (!parseResult.success) {
             return reply.status(400).send({

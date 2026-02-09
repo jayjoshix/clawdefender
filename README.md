@@ -31,7 +31,7 @@ Agent Tool Call
 ┌─────────────────────────────────────────────────────────────┐
 │  1. POLICY FIREWALL     → allow / deny / needs_approval    │
 │  2. SIGNED APPROVAL     → nonce-bound Ed25519 signature    │
-│  3. EXECUTE             → spawnSync(shell: false)          │
+│  3. EXECUTE             → hardened spawnSync(shell: false) │
 │  4. LOG CHAIN           → prev_hash → entry_hash binding   │
 │  5. SEAL ENCRYPT        → threshold encryption (Sui Seal)  │
 │  6. WALRUS STORE        → durable ciphertext layer         │
@@ -79,9 +79,10 @@ git clone https://github.com/jayjoshix/clawdefender.git
 cd clawdefender && pnpm install && pnpm build && pnpm demo
 ```
 
-**(2) Extract metrics from receipt file:**
+**(2) Extract metrics from latest receipt:**
 ```bash
-cat bundles/receipt-*.json
+# Get the most recent receipt file
+ls -t bundles/receipt-*.json | head -n 1 | xargs cat
 ```
 *Fields to check:* `policyHash`, `finalLogHash`, `blobId`, `bundleHash`, `receiptObjectId`.
 
@@ -237,10 +238,10 @@ const result = await client.proposeAction('shell', 'exec',
 <summary><strong>4. Human-in-the-Loop Approvals</strong></summary>
 
 ```
-Agent → POST /v1/propose_action → "needs_approval"
-Human → GET /v1/approval_payload/:id → Signs with Sui wallet
-Human → POST /v1/approve_action → Proposal approved
-Agent → POST /v1/execute_action → Action runs
+Agent → POST `/v1/proposeaction` → "needs_approval"
+Human reviews Telegram alert...
+Human → POST `/v1/approveaction` → Proposal approved
+Agent → POST `/v1/executeaction` → Action runs
 ```
 
 Telegram integration available for mobile approvals.
@@ -294,7 +295,7 @@ SessionReceipt on Sui contains:
 | Log Tampering | Hash chaining (`prev_hash` → `entry_hash`) | `verify-log` script |
 | Log Deletion | On-chain receipt anchors final hash | Sui receipt object |
 | Replay Attacks | Nonces + `executed` flag per proposal | `NonceTracker` |
-| Shell Injection | `spawnSync(shell: false)` | `server/index.ts:901` |
+| Shell Injection | `spawnSync(shell: false)` with regex argv parsing | `server/index.ts:901` |
 | Interpreter Bypass | Explicit deny rules (`bash -c *`) | `policy.yaml` |
 | Untrusted Input | PBAC conditions (`untrusted_source`) | Policy evaluator |
 
@@ -304,11 +305,11 @@ SessionReceipt on Sui contains:
 
 ```
 GET  /v1/status                       # Health + policy hash
-POST /v1/propose_action               # Submit action
-GET  /v1/approval_payload/:proposalId # Get signable payload
-POST /v1/approve_action               # Submit signature
-POST /v1/execute_action               # Execute (Plan A)
-POST /v1/complete_action              # Report result (Plan B)
+POST /v1/proposeaction              # Submit action
+GET  /v1/approvalpayload/:proposalId # Get signable payload
+POST /v1/approveaction              # Submit signature
+POST /v1/executeaction              # Execute (Plan A)
+POST /v1/completeaction             # Report result (Plan B)
 ```
 
 **Decision Literals**: `'allow' | 'deny' | 'needs_approval'`
@@ -320,9 +321,9 @@ POST /v1/complete_action              # Report result (Plan B)
 | Variable | Description |
 |----------|-------------|
 | `CLAWGUARDTOKEN` | API auth token (required for production) |
-| `SEAL_PACKAGE_ID` | Sui Seal package ID |
-| `SUI_KEYPAIR` | Sui private key (bech32) |
-| `WALRUS_PUBLISHER_URL` | Walrus endpoint |
+| `SEALPACKAGEID` | Sui Seal package ID. Required for encryption (alias: `SEAL_PACKAGE_ID`) |
+| `SUIKEYPAIR` | Sui private key. Auto-generated (alias: `SUI_KEYPAIR`) |
+| `WALRUSPUBLISHERURL` | Walrus publisher endpoint. Testnet default |
 
 **Simulation Mode**: Runs locally without blockchain when `SEAL_PACKAGE_ID` is unset.
 
@@ -346,9 +347,32 @@ cd packages/openclaw-adapter && pnpm test
 # Live Telegram approval
 export TELEGRAM_BOT_TOKEN="..."
 export TELEGRAM_CHAT_ID="..."
-curl -X POST localhost:3000/v1/propose_action \
+curl -X POST localhost:3000/v1/proposeaction \
   -H "Authorization: Bearer test" \
   -d '{"tool":"shell","action":"exec","args":{"command":"ls"},"meta":{"untrustedSource":"web"}}'
+```
+
+### `POST /v1/proposeaction`
+Request:
+```json
+{
+  "tool": "shell",
+  "action": "exec",
+  "args": { "command": "ls -la" },
+  "meta": { "untrustedSource": "web" }
+}
+```
+Response:
+```json
+{
+  "decision": "needs_approval",
+  "reason": "Potentially unsafe command",
+  "proposalId": "...",
+  "approvalRequired": {
+    "endpoint": "/v1/approvalpayload/...",
+    "ttlSeconds": 300
+  }
+}
 ```
 
 ---
