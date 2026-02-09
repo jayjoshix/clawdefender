@@ -19,6 +19,23 @@ rules:
         reason: "Home directory deletion"
       - pattern: "sudo *"
         reason: "Elevated privileges not allowed"
+      - pattern: "sh -c *"
+        reason: "Shell interpreter bypass restricted"
+      - pattern: "bash -c *"
+        reason: "Shell interpreter bypass restricted"
+      - pattern: "zsh -c *"
+        reason: "Shell interpreter bypass restricted"
+      - pattern: "python -c *"
+        reason: "Python interpreter bypass restricted"
+      - pattern: "perl -e *"
+        reason: "Perl interpreter bypass restricted"
+      - pattern: "ruby -e *"
+        reason: "Ruby interpreter bypass restricted"
+      - pattern: "node -e *"
+        reason: "Node interpreter bypass restricted"
+      - pattern: "env *"
+        reason: "Environment modification restricted"
+
       - pattern: ":(){:|:&};:"
         reason: "Fork bomb detected"
       - pattern: "chmod 777 *"
@@ -40,6 +57,11 @@ rules:
     
     # Commands requiring manual approval
     needs_approval:
+      # PBAC Rule: Force approval for all shell commands from untrusted sources
+      - pattern: "*"
+        reason: "Untrusted source requires approval for shell commands"
+        conditions:
+          untrusted_source: ["web", "email", "clipboard"]
       - pattern: "rm *"
         reason: "File deletion requires approval"
       - pattern: "mv *"
@@ -153,6 +175,11 @@ rules:
           reason: "Private network blocked"
       
       needs_approval:
+        # PBAC Rule: Force approval for network egress from untrusted sources
+        - domain: "*"
+          reason: "Untrusted source requires approval for network egress"
+          conditions:
+            untrusted_source: ["web", "email", "clipboard"]
         - domain: "*"
           reason: "External network access requires approval"
       

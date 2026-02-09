@@ -1,9 +1,19 @@
+# Sensitive Keys
+*-key.json
+.approver-key.json
+*.pem
+*.key
+
 # Logs
 logs/
+.logs/
 *.jsonl
 
 # Bundles
 bundles/
+
+# Generated E2E test files
+approvers-e2e*.yaml
 
 # Dependencies
 node_modules/

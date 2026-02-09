@@ -1,0 +1,31 @@
+{
+    "name": "@clawguard/openclaw-adapter",
+    "version": "0.1.0",
+    "type": "module",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "import": "./dist/index.js",
+            "types": "./dist/index.d.ts"
+        },
+        "./telegram": {
+            "import": "./dist/telegram.js",
+            "types": "./dist/telegram.d.ts"
+        }
+    },
+    "files": [
+        "dist"
+    ],
+    "scripts": {
+        "build": "tsc",
+        "test": "vitest run"
+    },
+    "dependencies": {
+        "@mysten/sui": "^1.0.0"
+    },
+    "devDependencies": {
+        "typescript": "^5.3.0",
+        "vitest": "^1.0.0"
+    }
+}

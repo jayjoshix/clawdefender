@@ -1,22 +1,30 @@
 import { z } from 'zod';
 
+// PBAC Conditions
+const ConditionsSchema = z.object({
+    untrusted_source: z.array(z.string()).optional(),
+}).optional();
+
 // Pattern rule schema
 const PatternRuleSchema = z.object({
     pattern: z.string(),
     reason: z.string(),
     paths_except: z.array(z.string()).optional(),
+    conditions: ConditionsSchema,
 });
 
 // Path rule schema
 const PathRuleSchema = z.object({
     path: z.string(),
     reason: z.string(),
+    conditions: ConditionsSchema,
 });
 
 // Domain rule schema
 const DomainRuleSchema = z.object({
     domain: z.string(),
     reason: z.string(),
+    conditions: ConditionsSchema,
 });
 
 // Shell rules
@@ -80,6 +88,9 @@ export interface PolicyRule {
     domain?: string;
     reason: string;
     paths_except?: string[];
+    conditions?: {
+        untrusted_source?: string[];
+    };
 }
 
 export interface EvaluationResult {

@@ -1,8 +1,4 @@
 module seal_policy::policy {
-    use sui::object::{Self, UID};
-    use sui::transfer;
-    use sui::tx_context::{Self, TxContext};
-
     /// Error codes
     const ESessionMismatch: u64 = 0;
 

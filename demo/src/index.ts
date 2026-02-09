@@ -14,7 +14,7 @@ import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import { SuiJsonRpcClient, getJsonRpcFullnodeUrl } from '@mysten/sui/jsonRpc';
 import { Transaction } from '@mysten/sui/transactions';
 import { decodeSuiPrivateKey } from '@mysten/sui/cryptography';
-import { fromB64, fromHex } from '@mysten/sui/utils';
+import { fromBase64, fromHex } from '@mysten/sui/utils';
 import { randomUUID } from 'node:crypto';
 import { resolve, join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -32,7 +32,7 @@ const BUNDLE_DIR = resolve(process.cwd(), 'bundles');
 
 // Configuration
 const SUI_NETWORK = (process.env.SUI_NETWORK || 'testnet') as 'testnet' | 'mainnet';
-const SEAL_PACKAGE_ID = process.env.SEAL_PACKAGE_ID || '0x0'; // Must be set for real demo
+const SEAL_PACKAGE_ID = process.env.SEAL_PACKAGE_ID || process.env.SEALPACKAGEID || '0x0'; // Must be set for real demo
 const WALRUS_PUBLISHER_URL = process.env.WALRUS_PUBLISHER_URL || 'https://publisher.walrus-testnet.walrus.space';
 const WALRUS_AGGREGATOR_URL = process.env.WALRUS_AGGREGATOR_URL || 'https://aggregator.walrus-testnet.walrus.space';
 const SUI_KEYPAIR_BECH32 = process.env.SUI_KEYPAIR; // suiprivkey...
@@ -298,6 +298,10 @@ async function main() {
         console.log(`   Signer: ${address} ${simulationMode ? '(SIMULATION)' : ''}`);
 
         try {
+            let txDigest: string | undefined;
+            let receiptObjectId: string | undefined;
+            let accessCapObjectId: string | undefined;
+
             // 1. Seal Encrypt
             // If strictly local simulation, we might want to mock this or ensure package ID is valid?
             // For now, let's assume public Seal package works for encryption even if we can't pay for decryption later.
@@ -341,7 +345,7 @@ async function main() {
             // 3. Publish Receipt on Sui
             if (SEAL_PACKAGE_ID !== '0x0' && !simulationMode) {
                 console.log('📜 Publishing SessionReceipt to Sui...');
-                const client = new SuiJsonRpcClient({ url: getJsonRpcFullnodeUrl(SUI_NETWORK) });
+                const client = new SuiJsonRpcClient({ url: getJsonRpcFullnodeUrl(SUI_NETWORK), network: SUI_NETWORK });
                 const tx = new Transaction();
 
                 // Mint AccessCap to sender
@@ -523,7 +527,8 @@ async function runVerification() {
 
             if (fields.data?.content?.dataType === 'moveObject') {
                 // @ts-ignore
-                const capSessionIdBytes = fields.data.content.fields.session_id;
+                const content = fields.data.content as any;
+                const capSessionIdBytes = content.fields.session_id;
                 // session_id is vector<u8>, assume returned as number[] or Uint8Array
                 const capSessionId = new TextDecoder().decode(new Uint8Array(capSessionIdBytes));
 
@@ -647,7 +652,7 @@ async function runVerification() {
                 }
 
                 // @ts-ignore - accessing Move struct fields
-                const fields = onChainReceipt.data.content.fields;
+                const fields = onChainReceipt.data.content.fields as any;
 
                 // Helper to convert vector<u8> to hex string
                 const bytesToHex = (bytes: number[]): string =>
@@ -757,7 +762,7 @@ async function runOnChainVerification(receiptObjectId: string) {
     }
 
     // @ts-ignore - accessing Move struct fields
-    const fields = receiptObj.data.content.fields;
+    const fields = receiptObj.data.content.fields as any;
 
     // Helper to convert vector<u8> to hex string
     const bytesToHex = (bytes: number[]): string =>

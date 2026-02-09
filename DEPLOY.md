@@ -37,12 +37,24 @@ Run the server as a containerized service.
     docker build -t clawguard/server:latest .
     ```
 
-2.  **Prepare Run Environment**:
+2.  **Authenticate & Push**:
+    ```bash
+    # Login to Docker Hub (or your registry)
+    docker login
+
+    # Tag and Push
+    docker tag clawguard/server:latest <your-registry>/clawguard-server:latest
+    docker push <your-registry>/clawguard-server:latest
+    ```
+
+3.  **Prepare Run Environment**:
     -   Create a `.env` file or set variables in your deployment platform (e.g., Kubernetes, Fly.io).
 
     ```env
     PORT=3000
     CLAWGUARDTOKEN=your-secret-token
+    # Seal Package ID (Deployed on Testnet)
+    SEAL_PACKAGE_ID=0x5379bf93b2b4733478e126f377d43b4cdc69ef6de7d7d163412fd3a0007c3fb2
     # Optional: Log directory (will be inside container)
     LOGDIR=.logs
     # Optional: Policy path (mount this volume)
@@ -58,11 +70,11 @@ Run the server as a containerized service.
     docker run -d \
       -p 3000:3000 \
       --env-file .env \
-      -v $(pwd)/logs:/app/.logs \
-      -v $(pwd)/packages/clawguard/policy.yaml:/app/policy.yaml \
+      -v $(pwd)/.logs:/app/.logs \
+      -v $(pwd)/packages/clawguard/policy.yaml:/app/policy.yaml:ro \
       --name clawguard-server \
       --health-cmd="curl -f http://localhost:3000/v1/status || exit 1" \
-      clawguard/server:latest
+      jayjoshix/clawguard-server:latest
     ```
 
 4.  **Verify**:

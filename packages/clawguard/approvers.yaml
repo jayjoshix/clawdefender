@@ -7,3 +7,6 @@ approvers:
   # Example approver (replace with real addresses)
   - address: "0xd4d32b8457e7c2ece27084631c7a6977ba851a19729deb92db4de848cd262aea"
     name: "Demo Approver (Testnet)"
+  # Generated for E2E testing
+  - address: "0xf734ba6572f5aecb6feaf025238eec05085a56764790f17c9a80c8990a0df4f9"
+    name: "E2E Test Approver"

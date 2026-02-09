@@ -26,7 +26,7 @@ RUN pnpm install --frozen-lockfile
 RUN pnpm build
 
 # Deploy only the clawguard server to a pruned directory
-RUN pnpm --filter @clawguard/core --prod deploy /app/pruned
+RUN pnpm --filter @clawguard/core --prod deploy /app/pruned --legacy
 
 # Runtime stage
 FROM node:20-slim

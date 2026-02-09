@@ -10,6 +10,7 @@ export interface ActionRequest {
     action: string;
     args: Record<string, unknown>;
     context?: Record<string, unknown>;
+    untrustedSource?: string;
 }
 
 import { createHash } from 'node:crypto';
@@ -37,20 +38,24 @@ export class PolicyEvaluator {
 
     /**
      * Deterministic policy evaluation.
-     * Order: deny -> needs_approval -> allow -> default
+     * Order establishes "Most-Restrictive-Wins" precedence:
+     * 1. Deny (Highest priority - always blocks)
+     * 2. Needs Approval (Blocks execution until approved)
+     * 3. Allow (Permits execution)
+     * 4. Default (Deny)
      */
     evaluate(request: ActionRequest): EvaluationResult {
-        const { tool, action, args } = request;
+        const { tool } = request;
 
         switch (tool) {
             case 'shell':
-                return this.evaluateShell(action, args);
+                return this.evaluateShell(request);
             case 'filesystem':
-                return this.evaluateFilesystem(action, args);
+                return this.evaluateFilesystem(request);
             case 'network':
-                return this.evaluateNetwork(action, args);
+                return this.evaluateNetwork(request);
             case 'browser':
-                return this.evaluateBrowser(action, args);
+                return this.evaluateBrowser(request);
             default:
                 return {
                     decision: this.policy.defaults.decision,
@@ -59,7 +64,8 @@ export class PolicyEvaluator {
         }
     }
 
-    private evaluateShell(action: string, args: Record<string, unknown>): EvaluationResult {
+    private evaluateShell(request: ActionRequest): EvaluationResult {
+        const { action, args } = request;
         const command = (args.command as string) ?? action;
         const rules = this.policy.rules.shell;
 
@@ -70,7 +76,7 @@ export class PolicyEvaluator {
         // Check deny rules first (highest priority)
         if (rules.deny) {
             for (const rule of rules.deny) {
-                if (this.matchesPattern(command, rule.pattern)) {
+                if (this.matchesRule(rule, command, request)) {
                     return { decision: 'deny', reason: rule.reason, matchedRule: rule };
                 }
             }
@@ -79,7 +85,7 @@ export class PolicyEvaluator {
         // Check needs_approval rules
         if (rules.needs_approval) {
             for (const rule of rules.needs_approval) {
-                if (this.matchesPattern(command, rule.pattern)) {
+                if (this.matchesRule(rule, command, request)) {
                     return { decision: 'needs_approval', reason: rule.reason, matchedRule: rule };
                 }
             }
@@ -88,7 +94,7 @@ export class PolicyEvaluator {
         // Check allow rules
         if (rules.allow) {
             for (const rule of rules.allow) {
-                if (this.matchesPattern(command, rule.pattern)) {
+                if (this.matchesRule(rule, command, request)) {
                     // Check paths_except for file-reading commands
                     if (rule.paths_except) {
                         // Extract file path from command (e.g., "cat ~/.ssh/id_rsa" -> "~/.ssh/id_rsa")
@@ -146,7 +152,8 @@ export class PolicyEvaluator {
         return paths;
     }
 
-    private evaluateFilesystem(action: string, args: Record<string, unknown>): EvaluationResult {
+    private evaluateFilesystem(request: ActionRequest): EvaluationResult {
+        const { action, args } = request;
         const path = (args.path as string) ?? '';
         const operation = action === 'read' ? 'read' : 'write';
         const rules = this.policy.rules.filesystem?.[operation];
@@ -158,7 +165,7 @@ export class PolicyEvaluator {
         // Check deny rules first
         if (rules.deny) {
             for (const rule of rules.deny) {
-                if (this.matchesPattern(path, rule.path)) {
+                if (this.matchesRule(rule, path, request)) {
                     return { decision: 'deny', reason: rule.reason, matchedRule: rule };
                 }
             }
@@ -167,7 +174,7 @@ export class PolicyEvaluator {
         // Check needs_approval rules
         if (rules.needs_approval) {
             for (const rule of rules.needs_approval) {
-                if (this.matchesPattern(path, rule.path)) {
+                if (this.matchesRule(rule, path, request)) {
                     return { decision: 'needs_approval', reason: rule.reason, matchedRule: rule };
                 }
             }
@@ -176,7 +183,7 @@ export class PolicyEvaluator {
         // Check allow rules
         if (rules.allow) {
             for (const rule of rules.allow) {
-                if (this.matchesPattern(path, rule.path)) {
+                if (this.matchesRule(rule, path, request)) {
                     return { decision: 'allow', reason: rule.reason, matchedRule: rule };
                 }
             }
@@ -185,7 +192,8 @@ export class PolicyEvaluator {
         return this.defaultResult();
     }
 
-    private evaluateNetwork(action: string, args: Record<string, unknown>): EvaluationResult {
+    private evaluateNetwork(request: ActionRequest): EvaluationResult {
+        const { args } = request;
         const domain = (args.domain as string) ?? (args.url as string) ?? (args.host as string) ?? '';
         const rules = this.policy.rules.network?.egress;
 
@@ -196,7 +204,7 @@ export class PolicyEvaluator {
         // Check deny rules first
         if (rules.deny) {
             for (const rule of rules.deny) {
-                if (this.matchesDomain(domain, rule.domain)) {
+                if (this.matchesRule(rule, domain, request)) {
                     return { decision: 'deny', reason: rule.reason, matchedRule: rule };
                 }
             }
@@ -205,7 +213,7 @@ export class PolicyEvaluator {
         // Check allow rules before needs_approval for network
         if (rules.allow) {
             for (const rule of rules.allow) {
-                if (this.matchesDomain(domain, rule.domain)) {
+                if (this.matchesRule(rule, domain, request)) {
                     return { decision: 'allow', reason: rule.reason, matchedRule: rule };
                 }
             }
@@ -214,7 +222,7 @@ export class PolicyEvaluator {
         // Check needs_approval rules
         if (rules.needs_approval) {
             for (const rule of rules.needs_approval) {
-                if (this.matchesDomain(domain, rule.domain)) {
+                if (this.matchesRule(rule, domain, request)) {
                     return { decision: 'needs_approval', reason: rule.reason, matchedRule: rule };
                 }
             }
@@ -223,7 +231,8 @@ export class PolicyEvaluator {
         return this.defaultResult();
     }
 
-    private evaluateBrowser(action: string, args: Record<string, unknown>): EvaluationResult {
+    private evaluateBrowser(request: ActionRequest): EvaluationResult {
+        const { args } = request;
         const domain = (args.domain as string) ?? (args.url as string) ?? '';
         const rules = this.policy.rules.browser;
 
@@ -234,7 +243,7 @@ export class PolicyEvaluator {
         // Check deny rules first
         if (rules.deny) {
             for (const rule of rules.deny) {
-                if (this.matchesDomain(domain, rule.domain)) {
+                if (this.matchesRule(rule, domain, request)) {
                     return { decision: 'deny', reason: rule.reason, matchedRule: rule };
                 }
             }
@@ -243,7 +252,7 @@ export class PolicyEvaluator {
         // Check allow rules before needs_approval for browser
         if (rules.allow) {
             for (const rule of rules.allow) {
-                if (this.matchesDomain(domain, rule.domain)) {
+                if (this.matchesRule(rule, domain, request)) {
                     return { decision: 'allow', reason: rule.reason, matchedRule: rule };
                 }
             }
@@ -252,7 +261,7 @@ export class PolicyEvaluator {
         // Check needs_approval rules
         if (rules.needs_approval) {
             for (const rule of rules.needs_approval) {
-                if (this.matchesDomain(domain, rule.domain)) {
+                if (this.matchesRule(rule, domain, request)) {
                     return { decision: 'needs_approval', reason: rule.reason, matchedRule: rule };
                 }
             }
@@ -278,6 +287,36 @@ export class PolicyEvaluator {
 
         const regex = new RegExp(`^${regexPattern}$`, 'i');
         return regex.test(expandedInput);
+    }
+
+    private matchesRule(rule: PolicyRule, input: string, request: ActionRequest): boolean {
+        // 1. Check pattern/path/domain match
+        const pattern = rule.pattern ?? rule.path ?? rule.domain;
+        if (pattern) {
+            // For network/browser, use matchesDomain, else matchesPattern
+            const isDomain = request.tool === 'network' || request.tool === 'browser';
+            const matches = isDomain
+                ? this.matchesDomain(input, pattern)
+                : this.matchesPattern(input, pattern);
+
+            if (!matches) return false;
+        }
+
+        // 2. Check PBAC conditions
+        return this.checkConditions(rule, request);
+    }
+
+    private checkConditions(rule: PolicyRule, request: ActionRequest): boolean {
+        if (!rule.conditions) return true;
+
+        // Check untrusted_source
+        if (rule.conditions.untrusted_source) {
+            // Mapping: YAML keys are snake_case, Request props are camelCase
+            if (!request.untrustedSource) return false;
+            if (!rule.conditions.untrusted_source.includes(request.untrustedSource)) return false;
+        }
+
+        return true;
     }
 
     private matchesDomain(input: string, pattern: string): boolean {

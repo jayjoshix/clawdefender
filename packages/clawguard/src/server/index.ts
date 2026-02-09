@@ -6,7 +6,8 @@ import { resolve } from 'node:path';
 import yaml from 'js-yaml';
 import { PolicyEvaluator, ActionRequest, ToolType } from '../policy/evaluator.js';
 import { HashChainLogger, sha256, verifyLogChain } from '../logging/hash-chain.js';
-import { execSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
+
 import { readFileSync, writeFileSync, existsSync, mkdirSync, chmodSync } from 'node:fs';
 import {
     buildCanonicalPayload,
@@ -62,7 +63,7 @@ const EVENT = {
     EXECUTE_BLOCKED: 'execute_blocked_missing_approval',
     EXECUTE: 'execute',
     EXECUTE_FAILED: 'execute_failed',
-    AGENT_COMPLETED: 'agentcompleted',
+    AGENT_COMPLETED: 'agent_completed',
 } as const;
 
 // Request/Response schemas
@@ -401,13 +402,13 @@ export async function createServer(options?: {
                 action: 'auth_failed',
                 args_hash: sha256({ path: request.url, method: request.method }),
                 decision: 'deny',
-                reason: 'Invalid or missing CLAWGUARD_TOKEN',
+                reason: 'Invalid or missing CLAWGUARDTOKEN',
                 result_hash: sha256({ blocked: true }),
             });
 
             return reply.status(401).send({
                 error: 'Unauthorized',
-                hint: 'Set Authorization: Bearer <CLAWGUARD_TOKEN> header',
+                hint: 'Set Authorization: Bearer <CLAWGUARDTOKEN> header',
             });
         }
     });
@@ -438,20 +439,20 @@ export async function createServer(options?: {
         }
 
         const { tool, action, args, context, meta } = parseResult.data;
-        const actionRequest: ActionRequest = { tool, action, args, context };
+        // Pass untrustedSource to evaluator (PBAC)
+        const actionRequest: ActionRequest = {
+            tool,
+            action,
+            args,
+            context,
+            untrustedSource: meta?.untrustedSource
+        };
 
-        let evalResult = evaluator.evaluate(actionRequest);
+        const evalResult = evaluator.evaluate(actionRequest);
         const policyHash = evaluator.getPolicyHash();
         const argsHash = sha256(args);
 
-        // Untrusted-input gate: force needs_approval for risky tools
-        const riskyTools: ToolType[] = ['shell', 'network'];
-        if (meta?.untrustedSource && riskyTools.includes(tool) && evalResult.decision === 'allow') {
-            evalResult = {
-                decision: 'needs_approval',
-                reason: `${evalResult.reason} (forced approval: untrusted source '${meta.untrustedSource}')`,
-            };
-        }
+        // Ad-hoc untrustedSource check removed (now handled by policy.yaml PBAC rules)
 
         const proposalId = randomUUID();
 
@@ -885,32 +886,47 @@ export async function createServer(options?: {
             switch (proposal.tool) {
                 case 'shell':
                     const command = (proposal.args.command as string) ?? proposal.action;
-                    const result = execSync(command, {
+
+                    // Minimal PBAC Hardening: Parse command to avoid shell injection
+                    // 1. Parse simple args (respecting quotes)
+                    const argsArray = command.match(/[^\s"]+|"([^"]*)"/g)?.map(s => s.replace(/^"|"$/g, '')) || [];
+
+                    if (argsArray.length === 0) {
+                        throw new Error('Empty command');
+                    }
+
+                    const [cmd, ...cmdArgs] = argsArray;
+
+                    // 2. Execute with shell: false (bypass prevention)
+                    const child = spawnSync(cmd, cmdArgs, {
                         encoding: 'utf-8',
                         timeout: 30000,
                         maxBuffer: 1024 * 1024,
+                        shell: false
                     });
-                    output = result;
-                    artifactRefs.push({ type: 'stdout', hash: sha256(result) });
+
+                    if (child.error) {
+                        throw child.error;
+                    }
+                    if (child.status !== 0) {
+                        throw new Error(child.stderr || child.stdout || `Command failed with exit code ${child.status}`);
+                    }
+
+                    output = child.stdout;
+                    // Log execution artifact (stdout)
+                    artifactRefs.push({ type: 'stdout', hash: sha256(output as string) });
                     break;
 
                 case 'filesystem':
-                    if (proposal.action === 'read') {
-                        const path = proposal.args.path as string;
-                        const content = readFileSync(path, 'utf-8');
-                        output = content;
-                        artifactRefs.push({ type: 'file', path, hash: sha256(content) });
-                    } else if (proposal.action === 'write') {
-                        const path = proposal.args.path as string;
-                        const content = proposal.args.content as string;
-                        writeFileSync(path, content);
-                        output = { written: true, path };
-                        artifactRefs.push({ type: 'file', path, hash: sha256(content) });
-                    }
-                    break;
-
                 default:
-                    output = { message: `Tool ${proposal.tool} execution not implemented` };
+                    // Unimplemented tools should NOT be marked as executed
+                    // Agent must use Plan B (/v1/complete_action) for these
+                    return reply.status(501).send({
+                        ok: false,
+                        error: `Tool '${proposal.tool}' execution not implemented on server`,
+                        hint: 'Use Plan B: execute locally and call /v1/complete_action with permit',
+                        proposalId,
+                    });
             }
 
             proposal.executed = true;
@@ -1031,8 +1047,14 @@ export async function createServer(options?: {
 // Start server if run directly
 const isMain = import.meta.url === `file://${process.argv[1]}`;
 if (isMain) {
-    const { app } = await createServer();
+    const { app } = await createServer({
+        // Accept both POLICY_PATH and POLICYPATH for compatibility
+        policyPath: process.env.POLICY_PATH ?? process.env.POLICYPATH,
+        logDir: process.env.LOGDIR,
+        approversPath: process.env.APPROVERS_PATH ?? process.env.APPROVERSPATH,
+        trustProxy: (process.env.TRUST_PROXY ?? process.env.TRUSTPROXY) === 'true',
+    });
     const port = parseInt(process.env.PORT ?? '3000', 10);
-    await app.listen({ port, host: '127.0.0.1' });
-    console.log(`ClawGuard server listening on http://127.0.0.1:${port}`);
+    await app.listen({ port, host: '0.0.0.0' });
+    console.log(`ClawGuard server listening on http://0.0.0.0:${port}`);
 }

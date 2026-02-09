@@ -119,10 +119,10 @@ approvers:
 async function startServer(): Promise<ChildProcess> {
     const env = {
         ...process.env,
-        CLAWGUARD_TOKEN: TOKEN,
+        CLAWGUARDTOKEN: TOKEN,
         PORT: '0', // Let OS assign
         POLICY_PATH: resolve(TEST_DIR, 'policy.yaml'),
-        LOG_DIR: resolve(TEST_DIR, 'logs'),
+        LOGDIR: resolve(TEST_DIR, 'logs'),
         APPROVERS_PATH: resolve(TEST_DIR, 'approvers.yaml')
     };
 

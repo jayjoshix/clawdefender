@@ -6,6 +6,7 @@ async function main() {
         policyPath: process.env.POLICY_PATH,
         logDir: process.env.LOGDIR,
         trustProxy: process.env.TRUST_PROXY === 'true', // Enable only if explicitly 'true'
+        approversPath: process.env.APPROVERS_PATH,
     });
 
     const port = parseInt(process.env.PORT ?? '3000', 10);

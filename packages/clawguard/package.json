@@ -23,7 +23,8 @@
         }
     },
     "files": [
-        "dist"
+        "dist",
+        "policy.yaml"
     ],
     "scripts": {
         "build": "tsc",
