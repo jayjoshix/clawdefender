@@ -1,6 +1,7 @@
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import { readFileSync, existsSync, writeFileSync, chmodSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { stableJson } from '../src/util/canonical-json.js';
 
 const KEY_PATH = resolve(import.meta.dirname, '../.approver-key.json');
 const payload = process.argv[2];
@@ -25,13 +26,28 @@ if (existsSync(KEY_PATH)) {
 }
 
 const parsed = JSON.parse(payload);
+let objectToSign = parsed;
+
+// If the input is wrapped in a "payload" property (like from the API response), unwrap it
+if (parsed.payload && typeof parsed.payload === 'object') {
+    console.error('📦 Unwraping payload from response wrapper...');
+    objectToSign = parsed.payload;
+}
+
+// Canonicalize the object to sign (match server's stableJson)
+// Simple approach: parse and re-stringify with sorted keys if possible, 
+// but for the demo, we rely on the API returning already canonical fields.
+// The server expects us to sign the EXACT JSON string of the canonical payload.
+
+// Re-serialize with stableJson to match server's formatting
+const encodedPayload = stableJson(objectToSign);
 const encoder = new TextEncoder();
-const payloadBytes = encoder.encode(payload);
+const payloadBytes = encoder.encode(encodedPayload);
 
 // Use signPersonalMessage for Sui wallet compatibility
 // This produces a signature that verifyPersonalMessageSignature can verify
 const { signature } = await keypair.signPersonalMessage(payloadBytes);
 
 // Output in format expected by Telegram handler
-console.log(`sig:${parsed.proposalId} ${keypair.toSuiAddress()} ${signature}`);
+console.log(`sig:${objectToSign.proposalId} ${keypair.toSuiAddress()} ${signature}`);
 

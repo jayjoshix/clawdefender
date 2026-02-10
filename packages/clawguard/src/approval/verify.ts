@@ -95,9 +95,18 @@ export async function verifyApproval(
     allowlist: Approver[]
 ): Promise<ApprovalRecord> {
     // 1. Check approver is in allowlist
-    const approver = allowlist.find(a =>
-        a.address.toLowerCase() === approval.approverAddress.toLowerCase()
-    );
+    console.log('🔍 Checking approver:', approval.approverAddress);
+    console.log('   Against allowlist:', JSON.stringify(allowlist));
+    const approver = allowlist.find(a => {
+        // Handle both string and object formats (for backward compatibility if needed)
+        // Force conversion to string to handle YAML parsing edge cases (e.g. hex numbers)
+        const rawAddr = typeof a === 'string' ? a : a?.address;
+        const addr = rawAddr ? String(rawAddr) : undefined;
+
+        if (!addr) return false;
+
+        return addr.toLowerCase() === approval.approverAddress.toLowerCase();
+    });
     if (!approver) {
         throw new Error(`Approver ${approval.approverAddress} not in allowlist`);
     }

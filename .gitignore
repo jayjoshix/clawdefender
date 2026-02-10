@@ -36,3 +36,4 @@ Thumbs.db
 
 # Move build artifacts
 move/*/build/
+payload.json

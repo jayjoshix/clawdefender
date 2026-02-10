@@ -184,8 +184,8 @@ rules:
           reason: "External network access requires approval"
       
       allow:
-        - domain: "api.github.com"
-          reason: "GitHub API allowed"
+        # - domain: "api.github.com"
+        #   reason: "GitHub API allowed"
         - domain: "registry.npmjs.org"
           reason: "NPM registry allowed"
         - domain: "pypi.org"

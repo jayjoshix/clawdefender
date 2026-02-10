@@ -1,14 +1,6 @@
-# ClawGuard Approvers Configuration
-# 
-# List of Sui addresses authorized to approve high-risk actions.
-# Approvers sign approval payloads using their Sui wallet.
-
 approvers:
-  # Example approver (replace with real addresses)
-  - address: "0xd4d32b8457e7c2ece27084631c7a6977ba851a19729deb92db4de848cd262aea"
-    name: "Demo Approver (Testnet)"
-  # Generated for E2E testing
-  - address: "0xf734ba6572f5aecb6feaf025238eec05085a56764790f17c9a80c8990a0df4f9"
-    name: "E2E Test Approver"
-  - address: "0xc6e62628caf968e178301958c1d07f956166b8cbdb811682195f1b020e84c747"
-    name: "User Generated Key"
+  - address: "0xa152e185c6dfdd057cb0fca5644838f71120286b208db39df239e0785f750b3e"
+    name: "Original Approver"
+  # Demo Key (auto-added)
+  - address: "0x79c7ea94921bbd8eae618be8213054196ae115ce3c431a0d39536f2afc18924e"
+    name: "Demo Approver"
