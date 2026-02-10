@@ -10,13 +10,13 @@ ClawGuard is an **immune system for root-capable local agents** (like OpenClaw).
 
 ## 🚀 Try It (1 Command)
 
-**Verify a Real Session:**
-Judges can verify our live audit trail using *only* this on-chain receipt ID:
-
-```bash
-# Verifies session 0x2764... by fetching receipt from Sui + blob from Walrus
-pnpm demo -- --receipt 0x2764f514d173c3cb2671607f2409745e691238914092b724597b8f041b376511
-```
+> [!IMPORTANT]
+> **Verify a Real Session Now**
+> Judges can verify our live audit trail using *only* this on-chain receipt ID (no keys required):
+>
+> ```bash
+> pnpm demo -- --receipt 0x2764f514d173c3cb2671607f2409745e691238914092b724597b8f041b376511
+> ```
 
 **Run a Fresh Session:**
 ```bash
