@@ -21,32 +21,34 @@
 
 ---
 
-## ✨ Key Capabilities
+### 1. Policy Firewall (`policy.yaml`)
+**Use**: Evaluates every proposed tool action and returns `allow | deny | needs_approval` before anything executes.
+**Why**: LLMs can be steered into dangerous tool calls (including via prompt injection), so you want a default-deny/approve gate that runs *before* execution.
 
-### 1. Policy Firewall (Default-Deny)
-Define a `policy.yaml` that decides **allow / deny / needs_approval** before anything runs. Supports **Untrusted Source Gating**: force approval for risky tools if the request comes from web/email/clipboard.
-
-### 2. Tamper-Evident Flight Recorder
-Every proposal, approval, and execution is appended to a cryptographic hash-chain log. On startup, the server verifies the chain and refuses to run if history is corrupted (fail-closed).
+### 2. Tamper-Evident Flight Recorder (Hash Chain)
+**Use**: Writes an append-only, hash-chained log of key security events and verifies the chain on startup.
+**Why**: If an attacker edits or deletes *individual* entries, chain verification fails. If the entire log is wiped, you can still prove the *final hash* via the on-chain Session Receipt (Proof of Truth).
 
 ### 3. Proof of Privacy (Seal Encryption)
-Session bundles are encrypted with **Sui Seal** locally (when `SEAL_PACKAGE_ID` is configured). If not configured, the demo falls back to plaintext (with a warning), but real deployments enforce encryption by policy. Decryption is strictly gated by owning the correct on-chain **AccessCap** NFT.
+**Use**: Encrypts the session bundle locally (when configured) so only a wallet with the right on-chain **AccessCap** can decrypt it.
+**Why**: You can publish encrypted bundles publicly and still prevent unauthorized parties from reading secrets inside the logs, because "having the ciphertext" is not enough to decrypt.
 
 ### 4. Proof of Permanence (Walrus Storage)
-Encrypted session bundles are uploaded to **Walrus**, producing a permanent `blobId`. Logs are stored with `deletable: false`, creating a durable audit trail that survives crashes or server wipes.
+**Use**: Uploads the encrypted bundle to **Walrus** (demo uses `deletable: false`).
+**Why**: Retrieval is decoupled from your laptop/server disk, reducing the risk of losing the audit trail due to local failure or malicious deletion.
 
-### 5. Proof of Truth (On-Chain SessionReceipts)
-When running in production mode (with keys), the server publishes a `SessionReceipt` object on Sui containing the Walrus blob ID and policy/log hashes. Pure on-chain verification allows re-deriving the entire history from the receipt alone.
+### 5. Proof of Truth (Session Receipt)
+**Use**: Publishes a compact on-chain receipt containing `policyHash`, `finalLogHash`, and `blobId`.
+**Why**: It gives you an independent anchor (the chain) to demonstrate "this specific bundle/log existed" and that any presented log matches the anchored hashes.
 
-### 6. Signed Approvals + Replay Protection
-When an action requires approval, the server issues a canonical payload. Users sign offline with their Sui wallet. Signatures are verified and nonces tracked to prevent replay.
+### 6. Human-in-the-Loop Approval
+**Use**: When policy returns `needs_approval`, the server issues a signable payload and only accepts execution after a verified signature is posted. (Telegram acts as the UI/notification channel).
+**Why**: Some actions are too risky to run on the model’s authority, so you require an explicit, auditable approval step bound to the exact proposal.
 
-### 7. "Plan B" Delegate Permits
-For external agents executing tools locally, the server mints short-lived signed permits bound to specific proposals. Agents report completion, closing the audit loop.
-
-### 8. Execution Hardening
-- **No Shell Injection**: Commands run via `spawnSync(shell: false)`.
-- **Interpreter Blocking**: Policy explicitly blocks `sh -c`, `python -c`, etc.
+### 7. Execution Hardening
+**Use**: For shell actions, the server parses the command and executes with `spawnSync(..., shell: false)`.
+**Why**: This mitigates classic shell injection where separators like `;` or `&&` change meaning under a shell—because there *is no shell* interpreting them.
+*Correction: Blocking interpreters (e.g. `python -c`) is enforced via **Policy Rules**, not just `spawnSync`.*
 
 ---
 
