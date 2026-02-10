@@ -30,13 +30,13 @@ Define a `policy.yaml` that decides **allow / deny / needs_approval** before any
 Every proposal, approval, and execution is appended to a cryptographic hash-chain log. On startup, the server verifies the chain and refuses to run if history is corrupted (fail-closed).
 
 ### 3. Proof of Privacy (Seal Encryption)
-Session bundles are encrypted with **Sui Seal** locally (when `SEAL_PACKAGE_ID` is configured). Decryption is strictly gated by owning the correct on-chain **AccessCap** NFT—raw logs never leave the machine in plaintext.
+Session bundles are encrypted with **Sui Seal** locally (when `SEAL_PACKAGE_ID` is configured). If not configured, the demo falls back to plaintext (with a warning), but real deployments enforce encryption by policy. Decryption is strictly gated by owning the correct on-chain **AccessCap** NFT.
 
 ### 4. Proof of Permanence (Walrus Storage)
 Encrypted session bundles are uploaded to **Walrus**, producing a permanent `blobId`. Logs are stored with `deletable: false`, creating a durable audit trail that survives crashes or server wipes.
 
 ### 5. Proof of Truth (On-Chain SessionReceipts)
-When running with real keys, the server publishes a `SessionReceipt` object on Sui containing the Walrus blob ID and policy/log hashes. Pure on-chain verification allows re-deriving the entire history from the receipt alone.
+When running in production mode (with keys), the server publishes a `SessionReceipt` object on Sui containing the Walrus blob ID and policy/log hashes. Pure on-chain verification allows re-deriving the entire history from the receipt alone.
 
 ### 6. Signed Approvals + Replay Protection
 When an action requires approval, the server issues a canonical payload. Users sign offline with their Sui wallet. Signatures are verified and nonces tracked to prevent replay.
@@ -44,7 +44,7 @@ When an action requires approval, the server issues a canonical payload. Users s
 ### 7. "Plan B" Delegate Permits
 For external agents executing tools locally, the server mints short-lived signed permits bound to specific proposals. Agents report completion, closing the audit loop.
 
-### 8. Execution Hardening (Verified)
+### 8. Execution Hardening
 - **No Shell Injection**: Commands run via `spawnSync(shell: false)`.
 - **Interpreter Blocking**: Policy explicitly blocks `sh -c`, `python -c`, etc.
 
