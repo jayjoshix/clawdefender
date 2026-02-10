@@ -1,17 +1,70 @@
-# ClawGuard 🛡️
+# ClawGuard: The Immune System for AI Agents 🛡️
 
-**The Policy Firewall & Digital Blackbox for AI Agents**
+**Track 1 Submission (Safety & Security)**
 
-> **ClawGuard turns any OpenClaw agent into a cryptographically auditable firewall**: every risky action is proposed, policy-checked, approved, logged, and anchored to Sui/Walrus for post-mortem verification.
+ClawGuard is an **immune system for root-capable local agents** (like OpenClaw). It forces every action through a Policy Firewall, requires Signed Human Approvals for risky tools, and maintains a Tamper-Evident Log Chain anchored on Sui.
 
-> **Designed for Suixclaw**: every decision (`allow` / `deny` / `needs_approval`) is machine-parseable, and every session has a verifiable Seal + Walrus + SessionReceipt trail so agents can audit other agents.
+> **Verifiable Audit Trail**: Actions are not just logged; they are hashed, encrypted (Seal), stored permanently (Walrus), and anchored on-chain (Sui Receipt) for independent verification.
 
-> **TL;DR for agents**: "Given a ClawGuard `SessionReceipt` object ID, I can fetch the Walrus blob, decrypt via Seal (if I hold AccessCap), recompute the log hash chain, and prove exactly what this agent did during that session."
+![Demo](https://i.imgur.com/placeholder-demo.gif)
 
+## 🚀 Try It (1 Command)
+
+**Verify a Real Session:**
+Judges can verify our live audit trail using *only* this on-chain receipt ID:
+
+```bash
+# Verifies session 0x2764... by fetching receipt from Sui + blob from Walrus
+pnpm demo -- --receipt 0x2764f514d173c3cb2671607f2409745e691238914092b724597b8f041b376511
+```
+
+**Run a Fresh Session:**
+```bash
+# Requires Sui Wallet (see Setup)
+pnpm demo
+```
+
+---
+
+## 🛡️ Security Properties
+
+1.  **Nonce-Based Replay Resistance**: Every approval is bound to a unique proposal nonce. Malicious replay of old signatures is mathematically impossible.
+2.  **Tamper-Evident Logging**: Logs are a cryptographic hash chain. `verifyLogChain()` runs on startup; if a single byte is modified, the server refuses to boot (fail-closed).
+3.  **Expiry Enforcement**: Approvals have a strict TTL (300s). Old signatures cannot be hoarded for later attacks.
+
+---
+
+## 🎯 Threat Model
+
+| In Scope (Protected) | Out of Scope |
+|----------------------|--------------|
+| **Prompt Injection**: LLM tricked into running `rm -rf /` (Blocked by Policy) | **Kernel Exploits**: Attacker has root access to the host machine OS |
+| **Logic Bugs**: Agent loops or hallucinates dangerous args (Blocked by Policy/Approval) | **Physical access**: Attacker steals the hard drive (Mitigated by Seal Encryption) |
+| **Compromised Log**: Attacker deletes logs so you can't see what happened (Detected by Hash Chain + Receipt) | **Social Engineering**: Attacker tricks *you* into signing a bad transaction |
+
+---
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 ![Sui](https://img.shields.io/badge/Sui-Network-blue)
 ![Walrus](https://img.shields.io/badge/Storage-Walrus-orange)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)
+
+---
+
+## ⚙️ How It Works
+
+ClawGuard intercepts every tool call and enforces a strict lifecycle:
+
+1.  **Propose**: Agent requests `shell:exec` with args. Server calculates `argsHash` and checks `policy.yaml`.
+2.  **Gate**:
+    *   **Allowed**: Executes immediately.
+    *   **Denied**: Returns 403 Forbidden.
+    *   **Needs Approval**: Server issues a unique `proposalId` and waits.
+3.  **Approve (Optional)**: Human signs the proposal hash. Server verifies signature + nonce (Replay Protection).
+4.  **Execute**: Server runs the command (Plan A) or issues a Permit (Plan B).
+5.  **Log**: Result is hashed and appended to the tamper-evident chain.
+6.  **Anchor**: On shutdown, the final chain hash is minted into a `SessionReceipt` on Sui.
+
+> **Deterministic Reconstruction**: Any verifier can take the log file and re-run `verifyLogChain()` to prove it matches the on-chain receipt.
 
 ---
 
