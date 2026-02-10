@@ -30,9 +30,9 @@ pnpm demo
 
 ## 🛡️ Security Properties
 
-1.  **Nonce-Based Replay Resistance**: Every approval is bound to a unique proposal nonce. Malicious replay of old signatures is mathematically impossible.
-2.  **Tamper-Evident Logging**: Logs are a cryptographic hash chain. `verifyLogChain()` runs on startup; if a single byte is modified, the server refuses to boot (fail-closed).
-3.  **Expiry Enforcement**: Approvals have a strict TTL (300s). Old signatures cannot be hoarded for later attacks.
+1.  **Nonce-Based Replay Resistance**: Every approval is bound to a unique proposal nonce. Replays are **rejected by nonce tracking** (single-use per session/approver).
+2.  **Tamper-Evident Logging**: Logs are a cryptographic hash chain. `verifyLogChain()` runs on startup; if a single byte is modified, the server refuses to use the history (fail-closed).
+3.  **Expiry Enforcement**: Approvals are bounded by `MAX_APPROVAL_TTL` (default 300s). Old signatures cannot be hoarded for later attacks.
 
 ---
 
