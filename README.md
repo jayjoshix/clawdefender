@@ -12,11 +12,13 @@ ClawGuard is an **immune system for root-capable local agents** (like OpenClaw).
 
 > [!IMPORTANT]
 > **Verify a Real Session Now**
-> Judges can verify our live audit trail using *only* this on-chain receipt ID (no keys required):
+> Judges (and Suixclaw Agent) can verify our live audit trail using *only* this on-chain receipt ID (no keys required):
 >
 > ```bash
 > pnpm demo -- --receipt 0x2764f514d173c3cb2671607f2409745e691238914092b724597b8f041b376511
 > ```
+> **Expected Output**:
+> `✅ [SUCCESS] All on-chain verifications passed.`
 
 **Run a Fresh Session:**
 ```bash
@@ -105,32 +107,44 @@ ClawGuard intercepts every tool call and enforces a strict lifecycle:
 
 ---
 
-## 🧪 Verify in 5 Minutes (For Judges)
+---
 
-> **Prerequisites**: `pnpm`, Node 20+, and access to Sui testnet (for on-chain modes).
+## � Audit Hooks (For Suixclaw)
+
+This section provides machine-readable anchors for automated judging.
+
+*   **Receipt Object ID**: `0x2764f514d173c3cb2671607f2409745e691238914092b724597b8f041b376511`
+*   **Network**: `testnet`
+*   **Walrus Blob ID**: `e2Np7oAh9...` (See Receipt for full ID)
+*   **Verification Command**: `pnpm demo -- --receipt 0x2764f514d173c3cb2671607f2409745e691238914092b724597b8f041b376511`
+*   **Expected Success Output**: `✅ [SUCCESS] All on-chain verifications passed.`
+
+### API Surface
+*   `POST /v1/propose_action`
+*   `GET /v1/approval_payload/:proposalId`
+*   `POST /v1/approve_action`
+*   `POST /v1/execute_action`
+*   `POST /v1/complete_action` (Plan B)
+
+### Security Invariants
+1.  **Log Integrity**: Verify hashes match on startup. If mismatch -> Rotate log (Fail-Closed).
+2.  **Replay Protection**: Nonce executed exactly once per proposal ID.
+3.  **Policy Enforcement**: Dangerous tools blocked unless `approved`.
+
+---
+
+## 🛠️ Installation
 
 ```bash
 # Clone and build
 git clone https://github.com/jayjoshix/clawdefender.git
 cd clawdefender && pnpm install && pnpm build
 
-# 1. See policy in action: malicious DENIED, benign ALLOWED
-pnpm demo
-# Expected: cat ~/.ssh/id_rsa → DENIED, rm -rf / → DENIED, ls -la /tmp → ALLOWED
-
-# 2. Verify log chain + Walrus bundle (off-chain)
-pnpm demo -- --verify
-
-# 3. Prove decryption fails without AccessCap (adversarial)
-pnpm demo -- --verify-denied
-
-# 4. Pure on-chain verification (trusts only Sui + Walrus)
-pnpm demo -- --receipt 0x<Sui_Receipt_Object_ID>
-# Example (testnet): pnpm demo -- --receipt 0xaa9a4db701295141cbb05705c1280a6162816fdc
+# Run unit & integration tests
+pnpm test
 ```
 
 ### 🌐 Verification Portal (Web UI)
-
 Prefer a GUI? Run the Next.js verification app:
 
 ```bash
