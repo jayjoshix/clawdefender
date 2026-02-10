@@ -301,3 +301,24 @@ export async function executeWithClawGuard(
         return { decision: 'allow', output: result, proposalId: proposal.proposalId };
     }
 }
+
+/**
+ * Factory for creating a safety-wrapped toolset compatible with OpenClawAgent.
+ */
+export function createClawGuardToolset(client: ClawGuardClient) {
+    return {
+        shellExec: async (command: string, opts?: { untrustedSource?: 'web' | 'email' | 'issue' | 'clipboard' }) => {
+            const res = await executeWithClawGuard(client, 'shell', 'exec', { command }, { meta: opts });
+            return res.output;
+        },
+        readFile: async (path: string, opts?: { untrustedSource?: 'web' | 'email' | 'issue' | 'clipboard' }) => {
+            const res = await executeWithClawGuard(client, 'filesystem', 'read', { path }, { meta: opts });
+            return res.output;
+        },
+        writeFile: async (path: string, content: string, opts?: { untrustedSource?: 'web' | 'email' | 'issue' | 'clipboard' }) => {
+            const res = await executeWithClawGuard(client, 'filesystem', 'write', { path, content }, { meta: opts });
+            return res.output;
+        }
+    };
+}
+

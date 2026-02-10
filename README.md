@@ -134,23 +134,36 @@ To audit a session programmatically:
 
 ## 🔌 Use With Your Agent
 
-In OpenClaw, route tools through ClawGuard by swapping direct shell/network/filesystem calls for `propose → (optional approve) → execute`. The included `@clawguard/openclaw-adapter` wraps these endpoints into an OpenClaw-compatible tool client.
+ClawGuard is designed as a **drop-in security wrapper** for OpenClaw agents.
+
+### 1. Install Adapter
+```bash
+npm install @clawguard/openclaw-adapter
+```
+
+### 2. Wrap Your Tools
+Instead of giving your agent raw `shellExec`, give it the firewall-protected version:
 
 ```typescript
-import { ClawGuardClient } from '@clawguard/openclaw-adapter';
+import { ClawGuardClient, createClawGuardToolset } from '@clawguard/openclaw-adapter';
 
-const client = new ClawGuardClient('http://localhost:3000', process.env.CLAWGUARDTOKEN);
+// 1. Connect to local firewall
+const client = new ClawGuardClient('http://localhost:3000');
 
-// Inside your OpenClaw agent tool implementation:
-const result = await client.proposeAction('shell', 'exec', { command: 'ls -la' });
+// 2. Create protected toolset
+const tools = createClawGuardToolset(client);
 
-// If needs_approval → wait for human signature via Telegram/API
-// If allow → execute immediately
-// If deny → blocked
-
-// Prove your agent's behavior from chain alone:
-// pnpm demo -- --receipt <id>
+// 3. Initialize your agent with SAFE tools
+const agent = new OpenClawAgent({
+  tools: {
+    shell: tools.shellExec,    // Protected by Policy + Approval
+    readFile: tools.readFile,  // Protected by Policy + Approval
+    // ...
+  }
+});
 ```
+
+Now, every time the agent tries to run a command, it goes through the **ClawGuard Pipeline** (Policy -> Approval -> Logs).
 
 ### Why Track 2 ("Jarvis") Teams Should Care
 - Protect your always-on assistant from `rm -rf` and wallet drains without touching your agent logic
