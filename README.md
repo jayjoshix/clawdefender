@@ -175,8 +175,8 @@ Now, every time the agent tries to run a command, it goes through the **ClawGuar
 
 ## ❓ FAQ for Judges
 
-**Q: What if the log is corrupted?**  
-A: `verifyLogChain()` recomputes all hashes and compares against the on-chain `finalLogHash`. Corruption is detected and rejected.
+**Q: What if the log is corrupted?**
+A: Locally, `verifyLogChain()` recomputes all hashes on startup; if the chain is broken, the server refuses to use it (fail-closed). Externally, verifiers compare the log's final hash against the on-chain `SessionReceipt` to prove no tampering occurred.
 
 **Q: What if the approver key is compromised?**  
 A: Each approval is nonce-bound to a specific proposal. Replay is impossible. Remove compromised addresses from `approvers.yaml`.
