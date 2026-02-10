@@ -1,10 +1,26 @@
 import { NextResponse } from 'next/server';
 
-function bytesToHex(bytes: number[]) {
-    return bytes.map(b => b.toString(16).padStart(2, '0')).join('');
+function bytesToHex(bytes: number[] | string) {
+    if (Array.isArray(bytes)) {
+        return bytes.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+    // Handle Base64 string from RPC
+    if (typeof bytes === 'string') {
+        const buf = Buffer.from(bytes, 'base64');
+        return buf.toString('hex');
+    }
+    return '';
 }
-function bytesToString(bytes: number[]) {
-    return new TextDecoder().decode(new Uint8Array(bytes));
+
+function bytesToString(bytes: number[] | string) {
+    if (Array.isArray(bytes)) {
+        return new TextDecoder().decode(new Uint8Array(bytes));
+    }
+    // Handle Base64 string from RPC
+    if (typeof bytes === 'string') {
+        return Buffer.from(bytes, 'base64').toString('utf8');
+    }
+    return '';
 }
 
 export async function GET(req: Request) {

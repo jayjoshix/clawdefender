@@ -22,6 +22,7 @@ import {
 } from '../approval/index.js';
 import { createPermit, verifyPermit } from '../auth/permit.js';
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
+import { TelegramService } from './telegram.js';
 
 // Server Identity (Persistent)
 const LOG_DIR = resolve(process.env.LOGDIR ?? '.logs');
@@ -90,7 +91,7 @@ const ExecuteActionSchema = z.object({
 });
 
 // Types
-interface Proposal {
+export interface Proposal {
     id: string;
     tool: ToolType;
     action: string;
@@ -308,6 +309,14 @@ export async function createServer(options?: {
     const evaluator = new PolicyEvaluator(options?.policyPath);
     const hashLogger = new HashChainLogger({ logDir, sessionId });
     const approversConfig = loadApproversConfig(options?.approversPath);
+    // const telegram = new TelegramService();
+
+    // // Setup Telegram Callback (Notification Only)
+    // telegram.setApprovalCallback(async (proposalId, decision, userId) => {
+    //     console.log(`📱 Telegram User ${userId} selected ${decision} for proposal ${proposalId}`);
+    //     // In a hosted environment with a custodial key, we could sign here.
+    //     // For now, we rely on the user to sign locally using the CLI.
+    // });
 
     // Verify log chain integrity before trusting it
     const logPath = hashLogger.getLogPath();
@@ -522,11 +531,20 @@ export async function createServer(options?: {
             proposalEntryHash: logEntry.entry_hash,
             permit,
             // Pointer to authoritative approval issuance
-            approvalRequired: evalResult.decision === 'needs_approval' ? {
+            approvalRequired: evalResult.decision === 'needs_approval' ? (() => {
+                // Trigger Telegram Notification
+                // const instructions = [
+                //     '1. Review the payload carefully',
+                //     '2. Sign the payload JSON bytes as a personal message with your Sui wallet',
+                //     '3. POST to /v1/approve_action with { proposalId, expiresAt, nonce, approverAddress, signature }',
+                // ];
+                // telegram.requestApproval(proposal, instructions).catch(err => console.error('Telegram Trigger Failed:', err));
 
-                endpoint: `/v1/approval_payload/${proposalId}`,
-                ttlSeconds: MAX_APPROVAL_TTL,
-            } : undefined,
+                return {
+                    endpoint: `/v1/approval_payload/${proposalId}`,
+                    ttlSeconds: MAX_APPROVAL_TTL,
+                };
+            })() : undefined,
         };
     });
 

@@ -10,3 +10,5 @@ approvers:
   # Generated for E2E testing
   - address: "0xf734ba6572f5aecb6feaf025238eec05085a56764790f17c9a80c8990a0df4f9"
     name: "E2E Test Approver"
+  - address: "0xc6e62628caf968e178301958c1d07f956166b8cbdb811682195f1b020e84c747"
+    name: "User Generated Key"

@@ -74,11 +74,11 @@ async function main() {
     const encoder = new TextEncoder();
     const payloadBytes = encoder.encode(payload);
 
-    // Sign the raw bytes
-    const signature = await keypair.sign(payloadBytes);
+    // Sign using signPersonalMessage (adds Intent scope and serializes with flag/pubkey)
+    const { signature } = await keypair.signPersonalMessage(payloadBytes);
 
-    // Convert to base64
-    const signatureBase64 = Buffer.from(signature).toString('base64');
+    // signature is already base64 encoded serialized signature
+    const signatureBase64 = signature;
 
     // Output in the format expected by Telegram handler
     console.log(`sig:${parsed.proposalId} ${address} ${signatureBase64}`);

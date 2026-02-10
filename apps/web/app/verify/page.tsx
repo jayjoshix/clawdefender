@@ -74,8 +74,8 @@ export default function VerifyPage() {
                         onClick={fetchReceipt}
                         disabled={loading || !objectId}
                         className={`w-full py-3 rounded font-bold transition-colors ${loading || !objectId
-                                ? 'bg-gray-600 cursor-not-allowed text-gray-400'
-                                : 'bg-cyan-600 hover:bg-cyan-500 text-white'
+                            ? 'bg-gray-600 cursor-not-allowed text-gray-400'
+                            : 'bg-cyan-600 hover:bg-cyan-500 text-white'
                             }`}
                     >
                         {loading ? 'Fetching from Chain...' : 'Fetch Receipt'}
@@ -88,51 +88,74 @@ export default function VerifyPage() {
                     )}
 
                     {data && (
-                        <div className="mt-8 animate-fade-in">
-                            <h2 className="text-xl font-semibold mb-4 text-green-400">✅ On-Chain Receipt Found</h2>
+                        <div className="mt-8 animate-fade-in space-y-6">
+                            <div className="bg-gray-900 rounded-lg p-6 border border-gray-700 shadow-inner">
+                                <h2 className="text-xl font-semibold mb-4 text-green-400 flex items-center gap-2">
+                                    ✅ On-Chain Receipt Found
+                                    <span className="text-xs bg-green-900/50 text-green-300 px-2 py-0.5 rounded border border-green-800">Verified</span>
+                                </h2>
 
-                            <div className="bg-gray-900 rounded p-4 font-mono text-sm overflow-x-auto border border-gray-700 space-y-3">
-                                <div>
-                                    <span className="text-gray-500 block">Session ID</span>
-                                    <span className="text-yellow-300">{data.sessionId}</span>
+                                <div className="space-y-3 font-mono text-sm">
+                                    <div className="flex justify-between border-b border-gray-800 pb-2">
+                                        <span className="text-gray-500">Session ID</span>
+                                        <span className="text-yellow-300 font-bold">{data.sessionId}</span>
+                                    </div>
+                                    <div className="flex justify-between border-b border-gray-800 pb-2">
+                                        <span className="text-gray-500">Walrus Blob ID</span>
+                                        <span className="text-blue-300">{data.walrusBlobId}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-500 block mb-1">Final Log Hash</span>
+                                        <span className="text-purple-300 break-all block bg-black/30 p-2 rounded">{data.finalLogHash}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-500 block mb-1">Bundle Hash</span>
+                                        <span className="text-gray-300 break-all block bg-black/30 p-2 rounded">{data.bundleHash}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-500 block mb-1">Policy Hash</span>
+                                        <span className="text-gray-300 break-all block bg-black/30 p-2 rounded">{data.policyHash}</span>
+                                    </div>
                                 </div>
-                                <div>
-                                    <span className="text-gray-500 block">Walrus Blob ID</span>
-                                    <span className="text-blue-300">{data.walrusBlobId}</span>
-                                </div>
-                                <div>
-                                    <span className="text-gray-500 block">Final Log Hash</span>
-                                    <span className="text-purple-300 break-all">{data.finalLogHash}</span>
-                                </div>
-                                <div>
-                                    <span className="text-gray-500 block">Bundle Hash</span>
-                                    <span className="text-gray-300 break-all">{data.bundleHash}</span>
-                                </div>
-                                <div>
-                                    <span className="text-gray-500 block">Policy Hash</span>
-                                    <span className="text-gray-300 break-all">{data.policyHash}</span>
+
+                                <div className="mt-6 p-4 bg-cyan-900/20 border border-cyan-800/50 rounded text-sm text-cyan-200">
+                                    <p>
+                                        These values are read directly from the on-chain <strong>SessionReceipt</strong>.
+                                        The CLI re-fetches Walrus ciphertext, decrypts via Seal (AccessCap-gated), and matches Bundle Hash + Final Log Hash.
+                                    </p>
                                 </div>
                             </div>
 
-                            <div className="mt-6 flex flex-col gap-3">
+                            <div className="flex flex-col gap-3">
                                 <a
                                     href={`https://suiscan.xyz/${network}/object/${objectId}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="block w-full text-center py-2 bg-gray-700 hover:bg-gray-600 rounded text-cyan-300 transition-colors border border-gray-600"
+                                    className="w-full flex items-center justify-center gap-2 py-3 bg-gray-800 hover:bg-gray-700 rounded text-cyan-400 font-semibold transition-colors border border-gray-700"
                                 >
-                                    View on Suiscan ↗
+                                    🔍 View on Suiscan ({network}) ↗
                                 </a>
 
-                                <div className="bg-black/50 p-4 rounded border border-cyan-900/50">
-                                    <p className="text-xs text-gray-500 mb-2 uppercase tracking-wide">Deep Verification Command</p>
-                                    <code className="block text-green-400 mb-3 break-all">{data.verifyCommand}</code>
+                                <div className="bg-black/40 p-5 rounded border border-green-900/50 relative group">
+                                    <p className="text-xs text-green-400 mb-2 uppercase tracking-wide font-bold">Cryptographic Verification Command</p>
+                                    <code className="block text-gray-300 mb-4 font-mono break-all text-sm bg-black p-3 rounded border border-gray-800">
+                                        {data.verifyCommand}
+                                    </code>
                                     <button
                                         onClick={copyCommand}
-                                        className="w-full py-2 bg-cyan-900/50 hover:bg-cyan-900 text-cyan-200 rounded text-sm transition-colors border border-cyan-800"
+                                        className="w-full py-2 bg-green-700 hover:bg-green-600 text-white rounded font-bold shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2"
                                     >
                                         📋 Copy Command
                                     </button>
+                                </div>
+
+                                <div className="mt-4">
+                                    <details className="text-gray-500 text-xs cursor-pointer group">
+                                        <summary className="hover:text-gray-300 transition-colors">Show Raw JSON Response</summary>
+                                        <pre className="mt-2 p-4 bg-black rounded border border-gray-800 overflow-x-auto text-gray-400 font-mono">
+                                            {JSON.stringify(data, null, 2)}
+                                        </pre>
+                                    </details>
                                 </div>
                             </div>
                         </div>

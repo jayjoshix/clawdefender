@@ -422,6 +422,19 @@ async function main() {
             writeFileSync(receiptPath, JSON.stringify(receipt, null, 2));
             console.log(`\n📄 Receipt saved: ${receiptPath}`);
 
+            // Machine-readable summary
+            console.log('\n🔍 AUDIT SUMMARY (JSON):');
+            console.log(JSON.stringify({
+                sessionId,
+                timestamp: receipt.uploadedAt,
+                policyHash: receipt.policyHash,
+                finalLogHash: receipt.finalLogHash,
+                blobId: receipt.blobId,
+                bundleHash: receipt.bundleHash,
+                receiptObjectId: receipt.receiptObjectId || null,
+                verificationStatus: receipt.receiptObjectId ? 'ANCHORED' : 'LOCAL_ONLY'
+            }));
+
         } catch (error) {
             console.log('\n⚠️  Seal/Walrus failed:', error);
             if (error instanceof Error) console.log(error.stack);
