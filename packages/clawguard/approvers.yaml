@@ -1,6 +1,5 @@
 approvers:
   - address: "0xa152e185c6dfdd057cb0fca5644838f71120286b208db39df239e0785f750b3e"
     name: "Original Approver"
-  # Demo Key (auto-added)
   - address: "0x79c7ea94921bbd8eae618be8213054196ae115ce3c431a0d39536f2afc18924e"
     name: "Demo Approver"

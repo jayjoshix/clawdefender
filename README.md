@@ -109,14 +109,14 @@ ClawGuard intercepts every tool call and enforces a strict lifecycle:
 
 ---
 
-## � Audit Hooks (For Suixclaw)
+##  Audit Hooks (For Suixclaw)
 
 This section provides machine-readable anchors for automated judging.
 
-*   **Receipt Object ID**: `0x2764f514d173c3cb2671607f2409745e691238914092b724597b8f041b376511`
+*   **Receipt Object ID**: `0x93f36eb61b761f6d4eb4a923970a91a70cc6e213b84abb74545d407ec58d1370`
 *   **Network**: `testnet`
-*   **Walrus Blob ID**: `e2Np7oAh9...` (See Receipt for full ID)
-*   **Verification Command**: `pnpm demo -- --receipt 0x2764f514d173c3cb2671607f2409745e691238914092b724597b8f041b376511`
+*   **Walrus Blob ID**: `ilmqEJVkbQTAzmqD8ByVQVlElRwrbE2_GzHH_b_R-Wg`
+*   **Verification Command**: `pnpm demo -- --receipt 0x93f36eb61b761f6d4eb4a923970a91a70cc6e213b84abb74545d407ec58d1370`
 *   **Expected Success Output**: `✅ [SUCCESS] All on-chain verifications passed.`
 
 ### API Surface
@@ -396,6 +396,26 @@ ClawGuard acts as a **Cryptographic Firewall** for your agent. When an agent att
 2.  **Verify**: You see exactly what the agent wants to do.
 3.  **Sign Offline**: You approve by signing the request **offline** with your Sui wallet.
 4.  **Authorize**: The signature is sent back, and only *then* does the action execute.
+
+**Testing the Telegram Integration:**
+You can test the full flow locally using the provided E2E script. Make sure your Telegram environment variables are exported in your terminal:
+
+```bash
+# Export the variables from .env to the environment
+set -a; source .env; set +a
+# Run the test
+npx tsx packages/openclaw-adapter/src/test-telegram-e2e.ts
+```
+
+**Generating a Signature for Telegram:**
+When prompted in Telegram, you can use the provided utility script to securely fetch the payload and generate a signature from your environment's private key without hardcoding sensitive data:
+
+```bash
+# Provide the Proposal ID shown in Telegram
+npx tsx packages/openclaw-adapter/sign_payload.ts <PROPOSAL_ID>
+```
+
+This will output the exact string format required by the Telegram bot (e.g., `sig:<id> <address> <signature>`), which you can simply copy and paste to approve the action.
 
 **Why?**
 -   **No "Click Fatigue"**: Requires cryptographic intent, not just a button press.
