@@ -146,13 +146,13 @@ describe('PolicyEvaluator', () => {
     });
 
     describe('Network Egress', () => {
-        it('should ALLOW api.github.com', () => {
+        it('should REQUIRE APPROVAL for api.github.com (Demo configuration)', () => {
             const result = evaluator.evaluate({
                 tool: 'network',
                 action: 'egress',
                 args: { domain: 'api.github.com' },
             });
-            expect(result.decision).toBe('allow');
+            expect(result.decision).toBe('needs_approval');
         });
 
         it('should DENY .onion domains', () => {
